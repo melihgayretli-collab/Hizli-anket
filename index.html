@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hızlı Anket</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 20px; background: #f4f4f4; }
+        .btn { display: block; width: 100%; padding: 20px; margin: 10px 0; font-size: 20px; cursor: pointer; border: none; border-radius: 10px; background: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        #admin-area { margin-top: 100px; padding: 20px; border-top: 2px dashed #ccc; display: none; }
+        .admin-btn { background: #333; color: white; padding: 10px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <div id="user-view">
+        <h2 id="status">Soru bekleniyor...</h2>
+        <div id="options"></div>
+    </div>
+
+    <div id="admin-area">
+        <h3>Admin Paneli</h3>
+        <button class="admin-btn" onclick="start('A')">A Grubunu Gönder</button>
+        <button class="admin-btn" onclick="start('B')">B Grubunu Gönder</button>
+        <div id="stats"></div>
+    </div>
+    
+    <button style="opacity:0.1" onclick="document.getElementById('admin-area').style.display='block'">.</button>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        const optionsDiv = document.getElementById('options');
+        const statusH2 = document.getElementById('status');
+
+        socket.on('yeni_soru', (data) => {
+            statusH2.innerText = data.grup + " Grubu: Hangisini Seversiniz?";
+            optionsDiv.innerHTML = '';
+            data.secilenler.forEach(s => {
+                optionsDiv.innerHTML += `<button class="btn" onclick="vote('${s}')">${s}</button>`;
+            });
+        });
+
+        function vote(s) {
+            socket.emit('oy_ver', s);
+            optionsDiv.innerHTML = '<h3>Oyunuz alındı!</h3>';
+        }
+
+        function start(grup) {
+            socket.emit('anket_baslat', grup);
+        }
+
+        socket.on('sonuc_guncelle', (s) => {
+            document.getElementById('stats').innerHTML += `<p>Oylanan: ${s}</p>`;
+        });
+    </script>
+</body>
+</html>
