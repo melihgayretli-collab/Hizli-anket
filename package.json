@@ -1,0 +1,13 @@
+{
+  "name": "hizli-anket",
+  "version": "1.0.0",
+  "description": "Anlık anket uygulaması",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.7.2"
+  }
+}
