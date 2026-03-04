@@ -9,41 +9,40 @@
         :root { 
             --primary: #4f46e5; 
             --white: #ffffff; 
-            --bg-overlay: rgba(0, 0, 0, 0.7); /* Yazıların okunması için koyu katman */
+            --bg-overlay: rgba(0, 0, 0, 0.7); 
         }
         
         body { 
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
             text-align: center; 
             margin: 0; 
-            /* ARKA PLAN RESMİ AYARLARI */
-            background-image: url('image1.png'); /* Bu dosyanın klasörde olması gerekir */
-            background-size: cover; /* Resmi tüm ekrana yay */
-            background-position: center; /* Resmi ortala */
+            background-image: url('image1.png'); 
+            background-size: cover; 
+            background-position: center; 
             background-repeat: no-repeat;
-            background-attachment: fixed; /* Ekran kayınca resim sabit kalsın */
-            
-            color: #f3f4f6; /* Koyu zeminde açık renk yazılar */
+            background-attachment: fixed; 
+            color: #f3f4f6; 
             height: 100vh; 
             display: flex; 
             flex-direction: column; 
             justify-content: center;
             overflow: hidden;
-            position: relative; /* İçerik için referans */
+            position: relative; 
         }
 
-        /* Tüm içeriği kapsayan cam katmanı */
         body::after {
             content: '';
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             background-color: var(--bg-overlay);
-            z-index: -1; /* İçeriğin arkasında kalsın */
+            z-index: -1; 
         }
         
-        /* Katılımcı Alanı */
         .container { padding: 20px; max-width: 500px; margin: 0 auto; width: 100%; box-sizing: border-box; z-index: 1; }
-        h2 { color: #818cf8; margin-bottom: 30px; font-size: 1.6rem; font-weight: 800; }
+        
+        /* Yeni Yazı Stili */
+        h2 { color: #818cf8; margin-bottom: 20px; font-size: 1.4rem; font-weight: 700; line-height: 1.4; }
+        .music-icon { font-size: 2.5rem; color: #818cf8; margin-bottom: 15px; display: block; }
         
         .btn { 
             display: block; 
@@ -54,7 +53,7 @@
             font-weight: 700;
             border-radius: 15px; 
             border: none; 
-            background: rgba(255, 255, 255, 0.95); /* Hafif şeffaf beyaz buton */
+            background: rgba(255, 255, 255, 0.95); 
             box-shadow: 0 4px 15px rgba(0,0,0,0.3); 
             cursor: pointer; 
             transition: all 0.2s ease;
@@ -62,7 +61,6 @@
         }
         .btn:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.8); }
 
-        /* Sağ Alttaki Çark Simgesi */
         .admin-trigger { 
             position: fixed; 
             bottom: 25px; 
@@ -72,11 +70,8 @@
             cursor: pointer; 
             z-index: 100;
             padding: 10px;
-            transition: color 0.2s;
         }
-        .admin-trigger:hover { color: #818cf8; }
 
-        /* Admin Paneli (Modal) */
         #admin-panel { 
             display: none; 
             position: fixed; 
@@ -88,7 +83,7 @@
             z-index: 200; 
             padding: 25px; 
             box-sizing: border-box; 
-            color: #1f2937; /* Panel içinde koyu yazılar */
+            color: #1f2937; 
             overflow-y: auto;
         }
         
@@ -100,7 +95,6 @@
             padding-bottom: 15px;
             margin-bottom: 25px;
         }
-        .admin-header h3 { margin: 0; font-size: 1.4rem; }
 
         .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .admin-btn { 
@@ -112,13 +106,9 @@
             font-size: 1.1rem; 
             font-weight: bold;
             cursor: pointer;
-            transition: background 0.2s;
         }
-        .admin-btn:hover { background: #4338ca; }
         .admin-btn.reset { background: #ef4444; margin-top: 15px; width: 100%; }
-        .admin-btn.reset:hover { background: #dc2626; }
 
-        /* Canlı Oy Akışı */
         #log-container { 
             margin-top: 30px; 
             background: #111827; 
@@ -128,21 +118,22 @@
             height: 250px; 
             overflow-y: auto; 
             text-align: left;
-            font-family: 'Courier New', Courier, monospace;
+            font-family: monospace;
             font-size: 0.9rem;
             border: 1px solid #374151;
         }
         .log-entry { border-bottom: 1px solid #1f2937; padding: 8px 0; }
-        .log-entry:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h2 id="status">Soru Bekleniyor...</h2>
+        <i class="fas fa-music music-icon"></i>
+        
+        <h2 id="status">Şimdi seçilen şarkının keyfini çıkar ve sıradaki oylama için hazır ol</h2>
+        
         <div id="options">
-            <p style="color: #94a3b8; font-size: 1.1rem;">Anket başladığında seçenekler burada belirecek.</p>
-        </div>
+            </div>
         
         <i class="fas fa-cog admin-trigger" onclick="openAdmin()"></i>
     </div>
@@ -173,7 +164,6 @@
         const adminPanel = document.getElementById('admin-panel');
         const voteLogs = document.getElementById('vote-logs');
 
-        // ŞİFRE KORUMALI ADMİN AÇILIŞI
         function openAdmin() {
             const sifre = prompt("Admin Şifresini Giriniz:");
             if (sifre === "N€yz€n") {
@@ -187,19 +177,15 @@
             adminPanel.style.display = 'none';
         }
 
-        // ADMİN KOMUTLARI
         function sendAnket(grup) {
             socket.emit('anket_baslat', grup);
-            // Logs'u temizle ve yeni grubu yaz
             voteLogs.innerHTML = `<div class="log-entry" style="color: #a7f3d0; text-align:center;">--- ${grup} Grubu Başlatıldı ---</div>`;
         }
 
-        // KATILIMCIYA SORU GELMESİ
         socket.on('yeni_soru', (data) => {
-            // Soru gelince admin panelini kapatıyoruz (isteğe bağlı)
             adminPanel.style.display = 'none'; 
-            statusH2.innerText = data.grup + " Grubu Anketi";
-            optionsDiv.innerHTML = ''; // Eski seçenekleri temizle
+            statusH2.innerText = "Sıradaki Şarkıyı Sen Seç!";
+            optionsDiv.innerHTML = ''; 
             
             data.secilenler.forEach(s => {
                 const btn = document.createElement('button');
@@ -210,20 +196,22 @@
             });
         });
 
-        // OY VERME
         function vote(secenek) {
             socket.emit('oy_ver', secenek);
-            // Katılımcıya geri bildirim ver
-            optionsDiv.innerHTML = '<h3 style="color: #34d399; margin-top:30px;">Oyunuz başarıyla iletildi!</h3><p style="color: #94a3b8;">Yeni soru bekleniyor...</p>';
+            optionsDiv.innerHTML = '<h3 style="color: #34d399; margin-top:30px;">Oyunuz başarıyla iletildi!</h3>';
+            // Kısa bir süre sonra bekleme mesajına geri dön
+            setTimeout(() => {
+                optionsDiv.innerHTML = '';
+                statusH2.innerText = "Şimdi seçilen şarkının keyfini çıkar ve sıradaki oylama için hazır ol";
+            }, 3000);
         }
 
-        // ADMİN PANELİNE CANLI VERİ AKIŞI
         socket.on('sonuc_guncelle', (data) => {
             const entry = document.createElement('div');
             entry.className = 'log-entry';
             const time = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             entry.innerText = `[${time}] Yeni Oy: ${data}`;
-            voteLogs.prepend(entry); // En yeni oyu en üste ekle
+            voteLogs.prepend(entry);
         });
     </script>
 </body>
