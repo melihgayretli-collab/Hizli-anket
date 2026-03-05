@@ -1,123 +1,237 @@
+
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hızlı Anket</title>
+    <title>Hızlı Anket - Profesyonel Yönetim</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        :root { --primary: #4f46e5; --white: #ffffff; --bg-overlay: rgba(0, 0, 0, 0.7); }
-        body { font-family: 'Segoe UI', sans-serif; text-align: center; margin: 0; background-image: url('image1.png'); background-size: cover; background-position: center; background-repeat: no-repeat; background-attachment: fixed; color: #f3f4f6; height: 100vh; display: flex; flex-direction: column; justify-content: center; overflow: hidden; position: relative; }
-        body::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-color: var(--bg-overlay); z-index: -1; }
-        .container { padding: 20px; max-width: 500px; margin: 0 auto; width: 100%; box-sizing: border-box; z-index: 1; }
-        h2 { color: #818cf8; margin-bottom: 20px; font-size: 1.4rem; font-weight: 700; }
-        .music-icon { font-size: 2.5rem; color: #818cf8; margin-bottom: 15px; display: block; }
-        .btn { display: block; width: 100%; padding: 18px; margin: 15px 0; font-size: 1.2rem; font-weight: 700; border-radius: 15px; border: none; background: rgba(255, 255, 255, 0.95); cursor: pointer; transition: all 0.2s ease; color: #111827; }
-        .admin-trigger { position: fixed; bottom: 25px; right: 25px; font-size: 2rem; color: rgba(255, 255, 255, 0.4); cursor: pointer; z-index: 100; padding: 10px; }
-        
-        /* Admin Paneli Gelişmiş */
-        #admin-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #f9fafb; z-index: 200; padding: 20px; box-sizing: border-box; color: #1f2937; overflow-y: auto; }
-        .admin-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .stat-bar { background: #e5e7eb; border-radius: 10px; height: 25px; margin: 10px 0; position: relative; overflow: hidden; }
-        .stat-fill { background: #4f46e5; height: 100%; width: 0%; transition: width 0.3s; }
-        .stat-text { position: absolute; width: 100%; top: 0; left: 0; font-size: 0.8rem; font-weight: bold; line-height: 25px; text-align: center; color: #111827; }
-        .history-list { text-align: left; background: white; border: 1px solid #ddd; padding: 10px; border-radius: 10px; margin-top: 20px; max-height: 150px; overflow-y: auto; }
-        .admin-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 20px 0; }
-        .admin-btn { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .stop-btn { background: #ef4444; width: 100%; padding: 15px; color: white; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        :root {
+            --primary: #4f46e5; --danger: #ef4444; --info: #3b82f6;
+            --success: #10b981; --warning: #f59e0b; --dark: #0f172a;
+            --input-bg: #1e293b; --main-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+       
+        body { font-family: var(--main-font); margin: 0; background: url('image1.png') no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; position: relative; }
+        body::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.75); z-index: -1; }
+
+        /* --- BEKLEME METİNLERİ (SABİTLENMİŞ YAPI - 1 SATIR YUKARI) --- */
+        #waiting-display { position: fixed; top: 60px; left: 80px; width: calc(50% - 80px); text-align: left; z-index: 5; pointer-events: none; }
+        .display-line { min-height: 2.2rem; font-size: 1.6rem; font-weight: 700; color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-bottom: 8px; letter-spacing: -0.2px; line-height: 1.2; width: 100%; }
+
+        /* --- KULLANICI ANA EKRANI --- */
+        .container { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px; text-align: center; }
+        h2 { color: #ffffff; font-weight: 700; font-size: 1.6rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.8); margin-bottom: 25px; }
+        .admin-trigger { position: fixed; bottom: 20px; right: 20px; font-size: 1.8rem; opacity: 0.1; cursor: pointer; z-index: 2000; color: white; }
+
+        /* --- ADMIN PANELİ --- */
+        #admin-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 3000; padding: 25px; box-sizing: border-box; overflow-y: auto; color: white; }
+        .admin-layer { display: none; opacity: 0; transform: translateY(20px); transition: all 0.3s ease-out; max-width: 600px; margin: 0 auto; width: 100%; }
+        .active-layer { display: block; opacity: 1; transform: translateY(0); }
+        .menu-grid { display: grid; gap: 15px; margin-top: 20px; }
+        .menu-btn { padding: 18px; font-size: 1rem; font-weight: 800; border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+       
+        /* Kategori Sayfası Öğeleri */
+        .cat-item { background: #1e293b; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; overflow: hidden; }
+        .cat-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(245, 158, 11, 0.1); }
+        .cat-content { display: none; padding: 10px; background: #0f172a; border-top: 1px solid #334155; }
+        .cat-action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+        .cat-mini-btn { padding: 10px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid; cursor: pointer; text-align: center; }
+       
+        .add-song-area { background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px dashed var(--info); display: none; }
+        .error-msg { color: var(--danger); font-size: 0.75rem; text-align: center; margin-top: 5px; display: none; font-weight: 700; background: rgba(239, 68, 68, 0.1); padding: 5px; border-radius: 4px; }
+
+        /* Bekleme Ekranı Düzenle */
+        .input-group { display: flex; align-items: center; background: var(--input-bg); margin-bottom: 8px; border-radius: 10px; border: 1px solid #334155; padding-right: 10px; }
+        .input-group label { padding: 10px; font-size: 0.75rem; color: #94a3b8; min-width: 80px; text-align: center; border-right: 1px solid #334155; }
+        .input-group input { flex: 1; background: none; border: none; color: white; padding: 12px; outline: none; font-size: 1rem; }
+        .align-tools { display: flex; gap: 8px; margin-right: 15px; border-right: 1px solid #334155; padding-right: 10px; }
+        .align-btn { color: #64748b; cursor: pointer; font-size: 1.1rem; }
+        .align-btn.active { color: var(--info); }
     </style>
 </head>
-<body>
+<body onclick="handleGlobalClick(event)">
+
+    <div id="waiting-display"></div>
 
     <div class="container">
-        <i class="fas fa-music music-icon"></i>
-        <h2 id="status">Şimdi seçilen şarkının keyfini çıkar ve sıradaki oylama için hazır ol</h2>
+        <h2 id="status">Sıradaki oylama için hazır ol</h2>
         <div id="options"></div>
         <i class="fas fa-cog admin-trigger" onclick="openAdmin()"></i>
     </div>
 
     <div id="admin-panel">
-        <div class="admin-header">
-            <h3>Yönetim Paneli</h3>
-            <i class="fas fa-times" style="font-size: 1.8rem; cursor:pointer;" onclick="closeAdmin()"></i>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom: 1px solid #334155; padding-bottom:15px;">
+            <div id="admin-header-title" style="font-weight:800; color:#818cf8;">YÖNETİCİ PANELİ <span id="admin-header-subtitle"></span></div>
+            <i class="fas fa-times-circle" style="font-size: 2rem; cursor:pointer; color: #64748b;" onclick="closeAdmin()"></i>
         </div>
 
-        <div class="admin-actions">
-            <button class="admin-btn" onclick="socket.emit('anket_baslat','A')">A Grubu</button>
-            <button class="admin-btn" onclick="socket.emit('anket_baslat','B')">B Grubu</button>
+        <div id="layer-menu" class="admin-layer active-layer">
+            <div class="menu-grid">
+                <button class="menu-btn" style="background:var(--danger);" onclick="switchLayer('layer-live', ' / CANLI')">CANLI SONUÇLAR</button>
+                <button class="menu-btn" style="background:var(--warning);" onclick="switchLayer('layer-repertoire', ' / REPERTUAR')">REPERTUAR DÜZENLE</button>
+                <button class="menu-btn" style="background:var(--info);" onclick="openWaitingLayer()">BEKLEME EKRANI DÜZENLE</button>
+            </div>
         </div>
 
-        <div id="stats-area">
-            <strong>Canlı Oylama Durumu (%):</strong>
-            <div id="bars"></div>
+        <div id="layer-repertoire" class="admin-layer">
+            <div class="menu-grid">
+                <button class="menu-btn" style="background:var(--warning);" onclick="renderCategories()">KATEGORİLER</button>
+                <button class="menu-btn" style="background:var(--info);" onclick="renderSongs()">ŞARKILAR</button>
+                <button class="menu-btn" style="background:#334155;" onclick="switchLayer('layer-menu', '')">GERİ</button>
+            </div>
         </div>
 
-        <button class="stop-btn" style="margin-top:20px" onclick="socket.emit('anket_sonlandir')">ANKETİ SONLANDIR</button>
+        <div id="layer-categories" class="admin-layer">
+            <div id="category-list"></div>
+            <button class="menu-btn toggle-trigger" style="background:var(--success); margin-top:15px;" onclick="toggleAccordionForm('add-cat-form', event)">+ KATEGORİ EKLE</button>
+            <div id="add-cat-form" style="display:none; background:#1e293b; padding:15px; border-radius:12px; margin-top:10px; border:1px solid var(--success);" class="form-container">
+                <input type="text" id="new-cat-name" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0f172a; color:white; box-sizing:border-box;" placeholder="Kategori Adı">
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="menu-btn" style="background:var(--success); padding:10px; font-size:0.8rem;" onclick="saveNewCategory()">KAYDET</button>
+                    <button class="menu-btn" style="background:var(--danger); padding:10px; font-size:0.8rem;" onclick="closeAllForms()">İPTAL</button>
+                </div>
+            </div>
+            <button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-repertoire', ' / REPERTUAR')">GERİ</button>
+        </div>
 
-        <div class="history-list">
-            <strong>Geçmiş Kazananlar:</strong>
-            <div id="history-items"></div>
+        <div id="layer-songs" class="admin-layer">
+            <button class="menu-btn toggle-trigger" style="background:var(--success); margin-bottom:15px;" onclick="toggleAccordionForm('add-song-form', event)">+ YENİ ŞARKI EKLE</button>
+            <div id="add-song-form" style="display:none; background:#1e293b; padding:15px; border-radius:12px; margin-bottom:20px; border:1px solid var(--success);" class="form-container">
+                <input type="text" id="new-song-name" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0f172a; color:white; box-sizing:border-box;" placeholder="Şarkı Adı">
+                <select id="new-song-cat" style="width:100%; padding:12px; margin-bottom:15px; border-radius:8px; border:none; background:#0f172a; color:white;"></select>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <button class="menu-btn" style="background:var(--success); padding:10px; font-size:0.8rem;" onclick="saveNewSong()">KAYDET</button>
+                    <button class="menu-btn" style="background:var(--danger); padding:10px; font-size:0.8rem;" onclick="closeAllForms()">İPTAL</button>
+                </div>
+            </div>
+            <div id="songs-list-container"></div>
+            <button class="menu-btn" style="background:#334155; margin-top:15px;" onclick="switchLayer('layer-repertoire', ' / REPERTUAR')">GERİ</button>
+        </div>
+
+        <div id="layer-waiting" class="admin-layer">
+            <div id="waiting-inputs"></div>
+            <div class="menu-grid" style="grid-template-columns: 1fr 1fr 1fr;">
+                <button class="menu-btn" style="background:#334155;" onclick="switchLayer('layer-menu', '')">GERİ</button>
+                <button class="menu-btn" style="background:var(--success);" onclick="saveWaiting()">KAYDET</button>
+                <button class="menu-btn" style="background:var(--danger);" onclick="clearAllAndAutoSave()">SİL</button>
+            </div>
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
     <script>
-        const socket = io();
-        const optionsDiv = document.getElementById('options');
-        const statusH2 = document.getElementById('status');
-        const adminPanel = document.getElementById('admin-panel');
-        const barsDiv = document.getElementById('bars');
-        const historyDiv = document.getElementById('history-items');
-        let soruSayaci = 1;
+        let categories = JSON.parse(localStorage.getItem('rep_cats') || '[]');
+        let allSongs = JSON.parse(localStorage.getItem('rep_songs') || '[]');
 
-        function openAdmin() {
-            if (prompt("Şifre:") === "N€yz€n") adminPanel.style.display = 'block';
-        }
-        function closeAdmin() { adminPanel.style.display = 'none'; }
-
-        socket.on('yeni_soru', (data) => {
-            adminPanel.style.display = 'none';
-            statusH2.innerText = "Sıradaki Şarkıyı Sen Seç!";
-            optionsDiv.innerHTML = '';
-            data.secilenler.forEach(s => {
-                optionsDiv.innerHTML += `<button class="btn" onclick="vote('${s}')">${s}</button>`;
-            });
-        });
-
-        function vote(s) {
-            socket.emit('oy_ver', s);
-            optionsDiv.innerHTML = '<h3>Oyunuz alındı!</h3>';
-            setTimeout(() => {
-                optionsDiv.innerHTML = '';
-                statusH2.innerText = "Şimdi seçilen şarkının keyfini çıkar ve sıradaki oylama için hazır ol";
-            }, 3000);
-        }
-
-        // ADMİN İÇİN CANLI YÜZDE HESAPLAMA
-        socket.on('istatistik_guncelle', (oylar) => {
-            barsDiv.innerHTML = '';
-            let toplam = Object.values(oylar).reduce((a, b) => a + b, 0);
-            
-            for (let secenek in oylar) {
-                let yuzde = toplam === 0 ? 0 : Math.round((oylar[secenek] / toplam) * 100);
-                barsDiv.innerHTML += `
-                    <div class="stat-bar">
-                        <div class="stat-fill" style="width: ${yuzde}%"></div>
-                        <div class="stat-text">${secenek}: %${yuzde} (${oylar[secenek]} oy)</div>
-                    </div>`;
+        // --- GLOBAL TIKLAMA KONTROLÜ (FIX) ---
+        function handleGlobalClick(e) {
+            // Eğer tıklanan yer bir formun içi değilse ve form açma butonu değilse her şeyi kapat
+            if (!e.target.closest('.form-container') &&
+                !e.target.closest('.toggle-trigger') &&
+                !e.target.closest('.add-song-area') &&
+                !e.target.closest('.cat-mini-btn')) {
+                closeAllForms();
             }
-        });
+        }
 
-        // GEÇMİŞE EKLEME
-        socket.on('gecmise_ekle', (data) => {
-            const p = document.createElement('p');
-            p.style.margin = "5px 0";
-            p.style.fontSize = "0.9rem";
-            p.innerHTML = `<b>${soruSayaci}. Soru</b> - ${data.grup} Grubu - Kazanan: <span style="color:green">${data.kazanan}</span>`;
-            historyDiv.prepend(p);
-            soruSayaci++;
-            alert("Anket Sonlandırıldı! Kazanan: " + data.kazanan);
-        });
+        function closeAllForms() {
+            document.querySelectorAll('#add-cat-form, #add-song-form, .add-song-area, .error-msg').forEach(f => f.style.display = 'none');
+        }
+
+        function toggleAccordionForm(id, event) {
+            if(event) event.stopPropagation();
+            const form = document.getElementById(id);
+            const isOpen = form.style.display === 'block';
+            closeAllForms();
+            if(!isOpen) {
+                form.style.display = 'block';
+                if(id === 'add-song-form') fillCatSelect();
+            }
+        }
+
+        // --- KATEGORİLER ---
+        function renderCategories() {
+            switchLayer('layer-categories', ' / KATEGORİLER');
+            const list = document.getElementById('category-list');
+            list.innerHTML = '';
+            categories.forEach(cat => {
+                const catSongs = allSongs.filter(s => s.catId === cat.id);
+                const uncatSongs = allSongs.filter(s => s.catId === null);
+                list.innerHTML += `
+                    <div class="cat-item" id="cat-item-${cat.id}">
+                        <div class="cat-header" onclick="toggleCat(${cat.id})">
+                            <span style="font-weight:700;">${cat.name.toUpperCase()}</span>
+                            <i class="fas fa-chevron-down arrow-icon"></i>
+                        </div>
+                        <div class="cat-content">
+                            <div class="cat-action-grid" id="del-area-${cat.id}">
+                                <div class="cat-mini-btn" style="border-color:var(--success); color:var(--success);" onclick="toggleAddSongToCatArea(${cat.id}, event)">+ ŞARKI EKLE</div>
+                                <div class="cat-mini-btn" style="border-color:var(--danger); color:var(--danger);" onclick="showDeleteConfirm(${cat.id}, event)">KATEGORİYİ SİL</div>
+                            </div>
+                            <div id="err-${cat.id}" class="error-msg">Kategori boş değil!</div>
+                           
+                            <div class="add-song-area form-container" id="add-to-cat-${cat.id}">
+                                <div style="max-height:150px; overflow-y:auto; margin-bottom:10px;">
+                                    ${uncatSongs.length > 0 ? uncatSongs.map(s => `<label style="display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #334155; cursor:pointer;"><input type="checkbox" class="cb-${cat.id}" value="${s.id}"> <span>${s.name}</span></label>`).join('') : '<p style="font-size:0.8rem; color:#64748b;">Boşta şarkı yok.</p>'}
+                                </div>
+                                <button class="menu-btn" style="padding:10px; background:var(--success); font-size:0.8rem;" onclick="saveBulkSongsToCat(${cat.id})">EKLE</button>
+                            </div>
+
+                            <div class="songs-list">${catSongs.map(s => `<div style="display:flex; align-items:center; padding:10px; border-bottom:1px solid #0f172a;"><span style="flex:1">${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer" onclick="changeSongCat(${s.id}, 'null'); renderCategories(); toggleCat(${cat.id});"></i></div>`).join('')}</div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function toggleAddSongToCatArea(catId, event) {
+            event.stopPropagation();
+            const area = document.getElementById(`add-to-cat-${catId}`);
+            const isOpen = area.style.display === 'block';
+            closeAllForms();
+            if(!isOpen) area.style.display = 'block';
+        }
+
+        function showDeleteConfirm(catId, event) {
+            event.stopPropagation();
+            const songCount = allSongs.filter(s => s.catId === catId).length;
+            const container = document.getElementById(`del-area-${catId}`);
+            if(songCount > 0) {
+                document.getElementById(`err-${catId}`).style.display = 'block';
+                return;
+            }
+            container.innerHTML = `
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:100%;" class="form-container">
+                    <div class="cat-mini-btn" style="background:var(--danger); color:white;" onclick="confirmDeleteCat(${catId}, event)">ONAY</div>
+                    <div class="cat-mini-btn" style="background:#334155; color:white;" onclick="renderCategories(); toggleCat(${catId});">İPTAL</div>
+                </div>`;
+        }
+
+        // --- DİĞER FONKSİYONLAR (DEĞİŞMEDİ) ---
+        function confirmDeleteCat(id, e) { categories = categories.filter(c => c.id !== id); saveData(); renderCategories(); }
+        function saveBulkSongsToCat(cid) { document.querySelectorAll(`.cb-${cid}:checked`).forEach(cb => { const s = allSongs.find(x => x.id == cb.value); if(s) s.catId = cid; }); saveData(); renderCategories(); toggleCat(cid); }
+        function toggleCat(id) { const item = document.getElementById(`cat-item-${id}`); const content = item.querySelector('.cat-content'); const isOpen = content.style.display === 'block'; closeAllForms(); document.querySelectorAll('.cat-content').forEach(c => c.style.display = 'none'); document.querySelectorAll('.arrow-icon').forEach(a => a.style.transform = 'rotate(0deg)'); if(!isOpen) { content.style.display = 'block'; item.querySelector('.arrow-icon').style.transform = 'rotate(180deg)'; } }
+        function saveNewCategory() { const n = document.getElementById('new-cat-name').value; if(n) { categories.push({id: Date.now(), name: n}); saveData(); renderCategories(); closeAllForms(); } }
+        function renderSongs() { switchLayer('layer-songs', ' / ŞARKILAR'); const container = document.getElementById('songs-list-container'); container.innerHTML = ''; allSongs.sort((a, b) => a.name.localeCompare(b.name, 'tr')).forEach(song => { let opts = `<option value="null" ${song.catId === null ? 'selected' : ''}>Kategorisiz</option>`; categories.forEach(c => opts += `<option value="${c.id}" ${song.catId === c.id ? 'selected' : ''}>${c.name}</option>`); container.innerHTML += `<div style="display:flex; align-items:center; padding:10px 15px; background:#1e293b; border-bottom:1px solid #0f172a;"><span style="flex:2;">${song.name}</span><select style="flex:1; background:#0f172a; color:white; border:1px solid #334155; padding:5px; border-radius:5px;" onchange="changeSongCat(${song.id}, this.value)">${opts}</select><i class="fas fa-times-circle" style="color:var(--danger); margin-left:10px; cursor:pointer;" onclick="changeSongCat(${song.id}, 'null'); renderSongs();"></i></div>`; }); }
+        function saveNewSong() { const n = document.getElementById('new-song-name').value; const c = document.getElementById('new-song-cat').value; if(n) { allSongs.push({id: Date.now(), name: n, catId: c === 'null' ? null : parseInt(c)}); saveData(); renderSongs(); closeAllForms(); } }
+        function changeSongCat(id, cid) { const s = allSongs.find(x => x.id === id); if(s) { s.catId = cid === 'null' ? null : parseInt(cid); saveData(); if(document.getElementById('layer-songs').style.display === 'block') renderSongs(); } }
+        function fillCatSelect() { const s = document.getElementById('new-song-cat'); s.innerHTML = '<option value="null">Kategorisiz</option>'; categories.forEach(c => s.innerHTML += `<option value="${c.id}">${c.name}</option>`); }
+        function saveData() { localStorage.setItem('rep_cats', JSON.stringify(categories)); localStorage.setItem('rep_songs', JSON.stringify(allSongs)); }
+        function switchLayer(id, sub) { document.getElementById('admin-header-subtitle').innerText = sub; document.querySelectorAll('.admin-layer').forEach(l => { l.classList.remove('active-layer'); l.style.display = 'none'; }); const a = document.getElementById(id); a.style.display = 'block'; setTimeout(() => a.classList.add('active-layer'), 10); }
+        function openAdmin() { document.getElementById('admin-panel').style.display = 'block'; }
+        function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
+       
+        // BEKLEME EKRANI (SABİT)
+        const inputsContainer = document.getElementById('waiting-inputs');
+        for (let i = 1; i <= 10; i++) {
+            inputsContainer.innerHTML += `<div class="input-group" id="group-${i}"><label>Satır ${i}</label><input type="text" id="row-${i}" data-align="left"><div class="align-tools"><i class="fas fa-align-left align-btn active" onclick="setAlign(${i}, 'left')"></i><i class="fas fa-align-center align-btn" onclick="setAlign(${i}, 'center')"></i><i class="fas fa-align-right align-btn" onclick="setAlign(${i}, 'right')"></i></div><i class="fas fa-times" style="color:var(--danger); cursor:pointer;" onclick="document.getElementById('row-${i}').value=''"></i></div>`;
+        }
+        function setAlign(r, a) { const group = document.getElementById(`group-${r}`); group.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active')); group.querySelector(`.fa-align-${a}`).classList.add('active'); document.getElementById(`row-${r}`).dataset.align = a; }
+        function openWaitingLayer() { switchLayer('layer-waiting', ' / BEKLEME EKRANI'); const data = JSON.parse(localStorage.getItem('waitingLinesV2') || "[]"); for(let i=1; i<=10; i++){ const r = data[i-1] || {text:"", align:"left"}; document.getElementById(`row-${i}`).value = r.text; setAlign(i, r.align); } }
+        function saveWaiting() { const lines = []; for(let i=1; i<=10; i++){ const inp = document.getElementById(`row-${i}`); lines.push({text: inp.value, align: inp.dataset.align || 'left'}); } localStorage.setItem('waitingLinesV2', JSON.stringify(lines)); renderDisplay(lines); switchLayer('layer-menu', ''); }
+        function renderDisplay(lines) { const d = document.getElementById('waiting-display'); d.innerHTML = ''; lines.forEach(l => { const div = document.createElement('div'); div.className = 'display-line'; div.innerText = l.text || ""; div.style.textAlign = l.align || "left"; d.appendChild(div); }); }
+        function clearAllAndAutoSave() { if(confirm("Tümünü sil?")) { const empty = Array(10).fill({text:"", align:"left"}); localStorage.setItem('waitingLinesV2', JSON.stringify(empty)); renderDisplay(empty); switchLayer('layer-menu', ''); } }
+        window.onload = () => { const d = localStorage.getItem('waitingLinesV2'); if(d) renderDisplay(JSON.parse(d)); };
     </script>
 </body>
 </html>
