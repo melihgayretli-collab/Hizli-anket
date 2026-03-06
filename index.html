@@ -33,7 +33,7 @@
         .menu-btn { padding: 16px; font-size: 0.9rem; font-weight: 800; border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
         .menu-btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
 
-        /* REPERTUAR TASARIMLARI (GERİ GELDİ) */
+        /* REPERTUAR TASARIMLARI */
         .cat-item { background: #1e293b; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; overflow: hidden; }
         .cat-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(245, 158, 11, 0.1); }
         .cat-content { display: none; padding: 10px; background: #0f172a; border-top: 1px solid #334155; }
@@ -160,12 +160,27 @@
         }
         function openAdmin() { document.getElementById('admin-panel').style.display = 'block'; updateMenuUI(); }
         function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
-        function handleGlobalClick(e) { if (!e.target.closest('.form-container') && !e.target.closest('.toggle-trigger') && !e.target.closest('.song-delete-confirm') && !e.target.closest('.fa-trash-alt')) { closeAllForms(); } }
-        function closeAllForms() { document.querySelectorAll('#add-cat-form, #add-song-form, .add-song-area, .error-msg, .song-delete-confirm').forEach(f => f.style.display = 'none'); }
+        
+        // GÜNCELLEDİĞİMİZ handleGlobalClick (Kategori ve dış alan kontrolü eklendi)
+        function handleGlobalClick(e) { 
+            if (!e.target.closest('.form-container') && 
+                !e.target.closest('.toggle-trigger') && 
+                !e.target.closest('.song-delete-confirm') && 
+                !e.target.closest('.fa-trash-alt') &&
+                !e.target.closest('.cat-item')) { 
+                closeAllForms(); 
+            } 
+        }
+
+        // GÜNCELLEDİĞİMİZ closeAllForms (Kategori içeriklerini de kapsıyor)
+        function closeAllForms() { 
+            document.querySelectorAll('#add-cat-form, #add-song-form, .add-song-area, .error-msg, .song-delete-confirm, .cat-content').forEach(f => f.style.display = 'none'); 
+        }
+
         function toggleAccordionForm(id, event) { if(event) event.stopPropagation(); const form = document.getElementById(id); const isOpen = form.style.display === 'block'; closeAllForms(); if(!isOpen) { form.style.display = 'block'; if(id === 'add-song-form') fillCatSelect(); } }
         function saveData() { localStorage.setItem('rep_cats', JSON.stringify(categories)); localStorage.setItem('rep_songs', JSON.stringify(allSongs)); }
 
-        // --- REPERTUAR: KATEGORİ İŞLEMLERİ (TAMAMI GERİ GELDİ) ---
+        // --- REPERTUAR: KATEGORİ İŞLEMLERİ ---
         function renderCategories() {
             switchLayer('layer-categories', ' / KATEGORİLER');
             const list = document.getElementById('category-list');
@@ -196,13 +211,23 @@
                     </div>`;
             });
         }
-        function toggleCat(id) { const item = document.getElementById(`cat-item-${id}`); const content = item.querySelector('.cat-content'); const isOpen = content.style.display === 'block'; closeAllForms(); if(!isOpen) content.style.display = 'block'; }
+
+        // GÜNCELLEDİĞİMİZ toggleCat (Açıkken kapanma mantığı eklendi)
+        function toggleCat(id) { 
+            const item = document.getElementById(`cat-item-${id}`); 
+            const content = item.querySelector('.cat-content'); 
+            const isOpen = content.style.display === 'block'; 
+            closeAllForms(); 
+            if(!isOpen) content.style.display = 'block'; 
+            else content.style.display = 'none';
+        }
+
         function toggleAddSongToCatArea(id, e) { e.stopPropagation(); const area = document.getElementById(`add-to-cat-${id}`); area.style.display = area.style.display === 'block' ? 'none' : 'block'; }
         function saveBulkSongsToCat(cid) { document.querySelectorAll(`.cb-${cid}:checked`).forEach(cb => { const s = allSongs.find(x => x.id == cb.value); if(s) s.catId = cid; }); saveData(); renderCategories(); toggleCat(cid); }
         function showDeleteConfirm(id, e) { e.stopPropagation(); const count = allSongs.filter(s => s.catId === id).length; if(count > 0) { document.getElementById(`err-${id}`).style.display = 'block'; return; } if(confirm("Kategoriyi sil?")) { categories = categories.filter(c => c.id !== id); saveData(); renderCategories(); } }
         function saveNewCategory() { const n = document.getElementById('new-cat-name').value; if(n) { categories.push({id: Date.now(), name: n}); saveData(); renderCategories(); closeAllForms(); } }
 
-        // --- REPERTUAR: ŞARKI İŞLEMLERİ (TAMAMI GERİ GELDİ) ---
+        // --- REPERTUAR: ŞARKI İŞLEMLERİ ---
         function renderSongs() {
             switchLayer('layer-songs', ' / ŞARKILAR');
             const container = document.getElementById('songs-list-container');
@@ -324,6 +349,7 @@
         function saveWaiting() { const l = []; for(let i=1; i<=10; i++){ l.push({text: document.getElementById(`row-${i}`).value, align: document.getElementById(`row-${i}`).dataset.align || 'left'}); } localStorage.setItem('waitingLinesV2', JSON.stringify(l)); renderDisplay(l); switchLayer('layer-menu', ''); }
         function renderDisplay(l) { const d = document.getElementById('waiting-display'); d.innerHTML = ''; l.forEach(line => { const div = document.createElement('div'); div.className = 'display-line'; div.innerText = line.text || ""; div.style.textAlign = line.align || "left"; d.appendChild(div); }); }
         function renderStartWithMekan() { renderMekanList(); document.getElementById('admin-header-subtitle').innerText = ' / MEKAN SEÇİN'; }
+        function clearAllAndAutoSave() { if(confirm("Tüm bekleme metinleri silinsin mi?")) { for(let i=1; i<=10; i++){ document.getElementById(`row-${i}`).value = ''; setAlign(i, 'left'); } saveWaiting(); } }
 
         window.onload = () => { if(localStorage.getItem('waitingLinesV2')) renderDisplay(JSON.parse(localStorage.getItem('waitingLinesV2'))); updateMenuUI(); };
     </script>
