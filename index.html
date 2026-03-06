@@ -38,15 +38,19 @@
         .cat-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(245, 158, 11, 0.1); }
         .cat-content { display: none; padding: 10px; background: #0f172a; border-top: 1px solid #334155; }
         .cat-mini-btn { padding: 10px; font-size: 0.8rem; font-weight: 700; border-radius: 8px; border: 1px solid; cursor: pointer; text-align: center; }
-        .add-song-area { display: none; background: #1e293b; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--success); }
         
         .song-row { background: #1e293b; border-bottom: 1px solid #0f172a; padding: 10px 15px; }
         .song-main { display: flex; align-items: center; gap: 10px; }
         .song-delete-confirm { display: none; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; margin-top: 10px; border: 1px solid var(--danger); }
 
-        /* SAHNE/ANKET ÖZELLİKLERİ */
-        .check-list-container { background: #1e293b; border-radius: 12px; padding: 15px; max-height: 300px; overflow-y: auto; margin-bottom: 15px; }
-        .check-item { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid #334155; cursor: pointer; }
+        /* SEÇİM LİSTESİ (YENİ HİYERARŞİK TASARIM) */
+        .check-list-container { background: #1e293b; border-radius: 12px; padding: 10px; max-height: 400px; overflow-y: auto; margin-bottom: 15px; }
+        .exclude-cat-group { background: #0f172a; border-radius: 8px; margin-bottom: 8px; border: 1px solid #334155; }
+        .exclude-cat-header { padding: 12px; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .exclude-cat-content { display: none; padding: 5px 12px 12px 35px; border-top: 1px solid #1e293b; }
+        .check-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; cursor: pointer; font-size: 0.9rem; }
+        .check-item input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; }
+
         .poll-card { background: #1e293b; padding: 15px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: space-between; border: 1px solid #334155; }
 
         /* BEKLEME EKRANI (SABİT) */
@@ -94,7 +98,7 @@
         </div>
 
         <div id="layer-special-select" class="admin-layer">
-            <h3 style="font-size:0.9rem; color:var(--warning);">ÇALINACAKLARI SEÇ (HEPSİ SEÇİLİ BAŞLAR)</h3>
+            <h3 style="font-size:0.9rem; color:var(--warning);">ÇALINACAKLARI SEÇ (KATEGORİ VEYA ŞARKI)</h3>
             <div id="special-check-list" class="check-list-container"></div>
             <button class="menu-btn" style="background:var(--success);" onclick="startScene('special')">SAHNEYİ BAŞLAT</button>
             <button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-start-options', '')">GERİ</button>
@@ -161,20 +165,19 @@
         function openAdmin() { document.getElementById('admin-panel').style.display = 'block'; updateMenuUI(); }
         function closeAdmin() { document.getElementById('admin-panel').style.display = 'none'; }
         
-        // GÜNCELLEDİĞİMİZ handleGlobalClick (Kategori ve dış alan kontrolü eklendi)
         function handleGlobalClick(e) { 
             if (!e.target.closest('.form-container') && 
                 !e.target.closest('.toggle-trigger') && 
                 !e.target.closest('.song-delete-confirm') && 
                 !e.target.closest('.fa-trash-alt') &&
-                !e.target.closest('.cat-item')) { 
+                !e.target.closest('.cat-item') &&
+                !e.target.closest('.exclude-cat-group')) { // SEÇİM GRUPLARINI KORU
                 closeAllForms(); 
             } 
         }
 
-        // GÜNCELLEDİĞİMİZ closeAllForms (Kategori içeriklerini de kapsıyor)
         function closeAllForms() { 
-            document.querySelectorAll('#add-cat-form, #add-song-form, .add-song-area, .error-msg, .song-delete-confirm, .cat-content').forEach(f => f.style.display = 'none'); 
+            document.querySelectorAll('#add-cat-form, #add-song-form, .add-song-area, .error-msg, .song-delete-confirm, .cat-content, .exclude-cat-content').forEach(f => f.style.display = 'none'); 
         }
 
         function toggleAccordionForm(id, event) { if(event) event.stopPropagation(); const form = document.getElementById(id); const isOpen = form.style.display === 'block'; closeAllForms(); if(!isOpen) { form.style.display = 'block'; if(id === 'add-song-form') fillCatSelect(); } }
@@ -212,14 +215,12 @@
             });
         }
 
-        // GÜNCELLEDİĞİMİZ toggleCat (Açıkken kapanma mantığı eklendi)
         function toggleCat(id) { 
             const item = document.getElementById(`cat-item-${id}`); 
             const content = item.querySelector('.cat-content'); 
             const isOpen = content.style.display === 'block'; 
             closeAllForms(); 
             if(!isOpen) content.style.display = 'block'; 
-            else content.style.display = 'none';
         }
 
         function toggleAddSongToCatArea(id, e) { e.stopPropagation(); const area = document.getElementById(`add-to-cat-${id}`); area.style.display = area.style.display === 'block' ? 'none' : 'block'; }
@@ -273,14 +274,78 @@
         }
         function startScene(type, mekanIdx = null) {
             sceneState.active = true;
-            if (type === 'special') {
-                const { exCats, exSongs } = getExcludedFromChecklist('special-check-list');
-                sceneState.excludedCatIds = exCats; sceneState.excludedSongIds = exSongs;
-            } else if (type === 'mekan') {
-                const m = mekanlar[mekanIdx];
-                sceneState.excludedCatIds = m.exCats; sceneState.excludedSongIds = m.exSongs;
+            const containerId = (type === 'special') ? 'special-check-list' : 'mekan-exclude-list';
+            const { exCats, exSongs } = getExcludedFromChecklist(containerId);
+            sceneState.excludedCatIds = exCats; sceneState.excludedSongIds = exSongs;
+            
+            if (type === 'mekan' && mekanIdx !== null) {
+                // Şablonu başlatıyorsak ama UI'dan değişiklik yapılmışsa güncel hali alır
             }
             updateMenuUI(); switchLayer('layer-menu', '');
+        }
+
+        // --- HİYERARŞİK SEÇİM SİSTEMİ (YENİ) ---
+        function renderExcludeChecklist() {
+            let h = '';
+            categories.forEach(c => {
+                const songs = allSongs.filter(s => s.catId === c.id);
+                h += `
+                <div class="exclude-cat-group" id="ex-group-${c.id}">
+                    <div class="exclude-cat-header" onclick="toggleExcludeCat(${c.id})">
+                        <input type="checkbox" class="cat-check" value="${c.id}" checked onclick="toggleCatSongs(${c.id}, this, event)">
+                        <span style="flex:1; font-weight:800; font-size:0.85rem;">${c.name.toUpperCase()}</span>
+                        <i class="fas fa-chevron-down" style="font-size:0.7rem; opacity:0.5;"></i>
+                    </div>
+                    <div class="exclude-cat-content" id="ex-content-${c.id}">
+                        ${songs.map(s => `
+                            <label class="check-item">
+                                <input type="checkbox" class="song-check cat-song-${c.id}" data-cat="${c.id}" value="${s.id}" checked onclick="checkParentStatus(${c.id})">
+                                ${s.name}
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>`;
+            });
+            
+            const uncatSongs = allSongs.filter(s => s.catId === null);
+            if(uncatSongs.length > 0) {
+                h += `<div style="margin-top:15px; padding-left:10px; color:var(--warning); font-size:0.7rem; font-weight:800;">KATEGORİSİZ ŞARKILAR</div>`;
+                uncatSongs.forEach(s => {
+                    h += `<label class="check-item" style="padding-left:10px;"><input type="checkbox" class="song-check" value="${s.id}" checked> ${s.name}</label>`;
+                });
+            }
+            return h;
+        }
+
+        function toggleExcludeCat(id) {
+            const content = document.getElementById(`ex-content-${id}`);
+            const isOpen = content.style.display === 'block';
+            // Sadece bu ekranın içindekileri kapat
+            document.querySelectorAll('.exclude-cat-content').forEach(c => c.style.display = 'none');
+            if(!isOpen) content.style.display = 'block';
+        }
+
+        function toggleCatSongs(catId, el, ev) {
+            ev.stopPropagation();
+            const isChecked = el.checked;
+            document.querySelectorAll(`.cat-song-${catId}`).forEach(cb => {
+                cb.checked = isChecked;
+            });
+        }
+
+        function checkParentStatus(catId) {
+            const allInCat = document.querySelectorAll(`.cat-song-${catId}`);
+            const checkedInCat = document.querySelectorAll(`.cat-song-${catId}:checked`);
+            const parentCb = document.querySelector(`.cat-check[value="${catId}"]`);
+            parentCb.checked = checkedInCat.length > 0;
+        }
+
+        function getExcludedFromChecklist(id) {
+            const exCats = []; const exSongs = [];
+            const container = document.getElementById(id);
+            container.querySelectorAll('.cat-check:not(:checked)').forEach(c => exCats.push(parseInt(c.value)));
+            container.querySelectorAll('.song-check:not(:checked)').forEach(s => exSongs.push(parseInt(s.value)));
+            return { exCats, exSongs };
         }
 
         // --- ANKET SİSTEMİ ---
@@ -316,22 +381,21 @@
             switchLayer('layer-mekan-list', ' / MEKANLAR');
             const cont = document.getElementById('mekan-items'); cont.innerHTML = '';
             mekanlar.forEach((m, i) => {
-                cont.innerHTML += `<div class="poll-card"><span>${m.name}</span><div style="display:flex; gap:5px;"><button class="cat-mini-btn" style="background:var(--success); color:white;" onclick="startScene('mekan', ${i})">BAŞLAT</button><button class="cat-mini-btn" style="background:var(--danger); color:white;" onclick="mekanlar.splice(${i},1); localStorage.setItem('mekan_sablonlari', JSON.stringify(mekanlar)); renderMekanList();"><i class="fas fa-trash"></i></button></div></div>`;
+                cont.innerHTML += `<div class="poll-card"><span>${m.name}</span><div style="display:flex; gap:5px;"><button class="cat-mini-btn" style="background:var(--success); color:white;" onclick="startFromMekan(${i})">BAŞLAT</button><button class="cat-mini-btn" style="background:var(--danger); color:white;" onclick="mekanlar.splice(${i},1); localStorage.setItem('mekan_sablonlari', JSON.stringify(mekanlar)); renderMekanList();"><i class="fas fa-trash"></i></button></div></div>`;
             });
         }
-        function openMekanForm() { document.getElementById('mekan-name').value = ''; document.getElementById('mekan-exclude-list').innerHTML = renderExcludeChecklist(); switchLayer('layer-mekan-form', ' / YENİ MEKAN'); }
-        function renderExcludeChecklist() {
-            let h = '<h4>KATEGORİLER</h4>';
-            categories.forEach(c => h += `<label class="check-item"><input type="checkbox" class="cat-check" value="${c.id}" checked> ${c.name}</label>`);
-            h += '<h4>ŞARKILAR</h4>';
-            allSongs.forEach(s => h += `<label class="check-item"><input type="checkbox" class="song-check" value="${s.id}" checked> ${s.name}</label>`);
-            return h;
+        function startFromMekan(idx) {
+            const m = mekanlar[idx];
+            sceneState.excludedCatIds = m.exCats;
+            sceneState.excludedSongIds = m.exSongs;
+            sceneState.active = true;
+            updateMenuUI();
+            switchLayer('layer-menu', '');
         }
-        function getExcludedFromChecklist(id) {
-            const exCats = []; const exSongs = [];
-            document.getElementById(id).querySelectorAll('.cat-check:not(:checked)').forEach(c => exCats.push(parseInt(c.value)));
-            document.getElementById(id).querySelectorAll('.song-check:not(:checked)').forEach(s => exSongs.push(parseInt(s.value)));
-            return { exCats, exSongs };
+        function openMekanForm() { 
+            document.getElementById('mekan-name').value = ''; 
+            document.getElementById('mekan-exclude-list').innerHTML = renderExcludeChecklist(); 
+            switchLayer('layer-mekan-form', ' / YENİ MEKAN'); 
         }
         function saveMekan() {
             const name = document.getElementById('mekan-name').value; if(!name) return;
