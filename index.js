@@ -5,55 +5,40 @@ const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, { cors: { origin: "*" } });
 
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(__dirname));
 
-const soruHavuzu = {
-    "A": ["Elma", "Armut", "Muz", "Çilek", "Karpuz", "Kavun", "Vişne", "Ananas"],
-    "B": ["Mavi", "Kırmızı", "Yeşil", "Sarı", "Mor", "Turuncu", "Pembe", "Siyah"]
-};
-
-let sorulanlar = new Set();
-let mevcutOylar = {}; // { "Elma": 3, "Muz": 5 }
-let mevcutSecenekler = [];
-let aktifGrup = "";
-
-app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+// Tüm istemcilerde durumu eşitlemek için sunucu tarafında bir state tutuyoruz
+let currentPoll = null;
 
 io.on('connection', (socket) => {
-    // Admin anket başlattığında oyları sıfırla
-    socket.on('anket_baslat', (grup) => {
-        aktifGrup = grup;
-        let havuz = soruHavuzu[grup] || [];
-        let secenekler = havuz.filter(x => !sorulanlar.has(x));
-        if (secenekler.length < 4) { sorulanlar.clear(); secenekler = havuz; }
-        
-        mevcutSecenekler = secenekler.sort(() => 0.5 - Math.random()).slice(0, 4);
-        mevcutSecenekler.forEach(s => {
-            sorulanlar.add(s);
-            mevcutOylar[s] = 0; // Oyları sıfırla
-        });
-        
-        io.emit('yeni_soru', { grup, secilenler: mevcutSecenekler });
-        io.emit('istatistik_guncelle', mevcutOylar); // Admin panelini sıfırla
+    // Yeni bağlanan kullanıcıya eğer aktif bir anket varsa onu gönder
+    if (currentPoll) {
+        socket.emit('yeni_anket_geldi', currentPoll);
+    }
+
+    // Admin anket yayınladığında
+    socket.on('anket_yayinla', (pollData) => {
+        currentPoll = pollData;
+        io.emit('yeni_anket_geldi', pollData);
     });
 
-    socket.on('oy_ver', (secenek) => {
-        if (mevcutOylar.hasOwnProperty(secenek)) {
-            mevcutOylar[secenek]++;
-            io.emit('istatistik_guncelle', mevcutOylar);
+    // Kullanıcı oy verdiğinde
+    socket.on('oy_ver', (optionId) => {
+        if (currentPoll) {
+            currentPoll.votes[optionId] = (currentPoll.votes[optionId] || 0) + 1;
+            // Güncel oy sayılarını admin ve diğerlerine gönder
+            io.emit('oy_sayisini_guncelle', currentPoll.votes);
         }
     });
 
-    socket.on('anket_sonlandir', () => {
-        // En yüksek oyu alanı bul
-        let kazanan = Object.keys(mevcutOylar).reduce((a, b) => mevcutOylar[a] >= mevcutOylar[b] ? a : b, "");
-        if (kazanan) {
-            io.emit('gecmise_ekle', { grup: aktifGrup, kazanan: kazanan });
-            mevcutOylar = {}; // Oyları temizle
-        }
+    // Anket bitirildiğinde
+    socket.on('anketi_bitir_sinyali', (winnerName) => {
+        currentPoll = null;
+        io.emit('anket_temizle', winnerName);
     });
 });
 
-server.listen(process.env.PORT || 3000);
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server port: ${PORT}`));
