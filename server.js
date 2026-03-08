@@ -17,7 +17,6 @@ let currentWaitingData = [];
 let activePoll = null;
 let votedIps = new Set(); // Tekil oy kontrolü için
 
-// Veritabanı Yükleme/Kaydetme Yardımcıları
 async function loadDB() {
     try {
         return await fs.readJson(DB_PATH);
@@ -33,16 +32,13 @@ async function saveDB(data) {
 io.on('connection', async (socket) => {
     const db = await loadDB();
     
-    // Açılışta verileri gönder
     socket.emit('init_data', db);
     socket.emit('sahne_durumu_guncelle', currentSceneActive);
     if (currentWaitingData.length > 0) socket.emit('bekleme_guncelle', currentWaitingData);
     if (activePoll) socket.emit('yeni_anket_geldi', activePoll);
 
-    // REPERTUAR GÜNCELLEME (Admin'den gelir)
     socket.on('update_repertuar', async (data) => {
         await saveDB(data);
-        // Tüm admin panellerini güncellemek istersen:
         io.emit('init_data', data);
     });
 
@@ -57,7 +53,7 @@ io.on('connection', async (socket) => {
     });
 
     socket.on('anket_yayinla', (pollData) => {
-        votedIps.clear(); // Yeni ankette oyları sıfırla
+        votedIps.clear();
         activePoll = { ...pollData, votes: {} };
         pollData.options.forEach(opt => activePoll.votes[opt.id] = 0);
         io.emit('yeni_anket_geldi', activePoll);
@@ -67,9 +63,9 @@ io.on('connection', async (socket) => {
         const clientIp = socket.handshake.address;
         if (activePoll && !votedIps.has(clientIp)) {
             activePoll.votes[optionId] = (activePoll.votes[optionId] || 0) + 1;
-            votedIps.add(clientIp); // Bu IP'yi işaretle
+            votedIps.add(clientIp);
             io.emit('oy_guncellendi', activePoll);
-            socket.emit('oy_onaylandi'); // Oy verene bildirim
+            socket.emit('oy_onaylandi');
         } else {
             socket.emit('oy_reddedildi', 'Zaten oy verdiniz!');
         }
