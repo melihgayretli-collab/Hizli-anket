@@ -49,6 +49,8 @@
         
         .poll-btn { background: rgba(79, 70, 229, 0.2); border: 2px solid var(--primary); color: white; padding: 20px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; cursor: pointer; width: 300px; margin-bottom: 15px; }
         .sticky-bottom-btn { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 50px); max-width: 550px; }
+
+        .poll-history-item { background: #1e293b; padding: 10px; border-radius: 8px; margin-top: 8px; font-size: 0.85rem; border-left: 4px solid var(--success); text-align: left; }
     </style>
 </head>
 <body onclick="handleGlobalClick(event)">
@@ -141,7 +143,15 @@
 
         <div id="layer-poll-cats" class="admin-layer"><div id="poll-cat-list" class="menu-grid"></div><button class="menu-btn" style="background:#334155; margin-top:20px;" onclick="switchLayer('layer-menu', '')">GERİ</button></div>
         <div id="layer-poll-create" class="admin-layer"><h3 id="poll-cat-title" style="text-align:center; color:var(--success);"></h3><div id="poll-options-container" class="check-list-container"></div><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:15px;"><button class="menu-btn" style="background:#334155;" onclick="switchLayer('layer-poll-cats', '')">GERI</button><button class="menu-btn" style="background:var(--primary);" onclick="publishPoll()">ANKETİ YAYINLA</button></div></div>
-        <div id="layer-results" class="admin-layer"><div id="active-poll-results"></div><button id="btn-end-poll" class="menu-btn" style="background:var(--danger); margin-top:20px; display:none;" onclick="endPoll()">ANKETİ BİTİR</button><button class="menu-btn" style="background:#334155; margin-top:20px;" onclick="switchLayer('layer-menu', '')">GERİ</button></div>
+        <div id="layer-results" class="admin-layer">
+            <div id="active-poll-results"></div>
+            <button id="btn-end-poll" class="menu-btn" style="background:var(--danger); margin-top:20px; display:none;" onclick="endPoll()">ANKETİ BİTİR</button>
+            <div id="poll-history-container" style="margin-top:30px; border-top:1px solid #334155; padding-top:15px;">
+                <div style="font-size:0.8rem; color:#64748b; margin-bottom:10px; font-weight:800;">TAMAMLANAN ANKETLER</div>
+                <div id="poll-history-list"></div>
+            </div>
+            <button class="menu-btn" style="background:#334155; margin-top:20px;" onclick="switchLayer('layer-menu', '')">GERİ</button>
+        </div>
     </div>
 
     <script>
@@ -149,6 +159,8 @@
         let categories = JSON.parse(localStorage.getItem('rep_cats') || '[]');
         let allSongs = JSON.parse(localStorage.getItem('rep_songs') || '[]');
         let mekanlar = JSON.parse(localStorage.getItem('mekan_sablonlari') || '[]');
+        let pollHistory = JSON.parse(localStorage.getItem('poll_history') || '[]');
+        
         let sceneState = { active: false, currentExCats: [], currentExSongs: [], playedSongIds: [], activePoll: null };
         let editingMekanIndex = null;
 
@@ -156,6 +168,7 @@
             localStorage.setItem('rep_cats', JSON.stringify(categories));
             localStorage.setItem('rep_songs', JSON.stringify(allSongs));
             localStorage.setItem('mekan_sablonlari', JSON.stringify(mekanlar));
+            localStorage.setItem('poll_history', JSON.stringify(pollHistory));
         }
 
         function switchLayer(id, sub) {
@@ -275,6 +288,7 @@
             sceneState.currentExSongs = m.exSongs;
             sceneState.playedSongIds = [];
             document.getElementById('status').style.display = 'block';
+            socket.emit('sahne_baslat_sinyali'); // Diğer ekranlara haber ver
             updateMenuUI();
             switchLayer('layer-menu', '');
         }
@@ -283,6 +297,7 @@
             if(confirm("Sahneyi bitir?")) {
                 sceneState.active = false;
                 document.getElementById('status').style.display = 'none';
+                socket.emit('sahne_bitir_sinyali');
                 updateMenuUI();
                 switchLayer('layer-menu', '');
             }
@@ -331,6 +346,7 @@
                 data.push({text: inp.value, align: inp.dataset.align});
             }
             localStorage.setItem('waiting_texts', JSON.stringify(data));
+            socket.emit('waiting_update_sinyali', data); // Herkese gönder
             renderWaitingDisplay();
             switchLayer('layer-menu', '');
         }
@@ -385,12 +401,36 @@
             document.getElementById('btn-rep-edit').style.display = active ? 'none' : 'flex';
         }
 
-        socket.on('yeni_anket_geldi', (poll) => { sceneState.activePoll = poll; renderPollUserUI(poll); });
+        // --- Soket Dinleyicileri (Herkese açık kısımlar) ---
+        socket.on('sahne_baslatildi', () => {
+            sceneState.active = true;
+            document.getElementById('status').style.display = 'block';
+            document.getElementById('status').innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+        });
+
+        socket.on('sahne_bitirildi', () => {
+            sceneState.active = false;
+            document.getElementById('status').style.display = 'none';
+            document.getElementById('options').innerHTML = '';
+        });
+
+        socket.on('waiting_update_geldi', (data) => {
+            localStorage.setItem('waiting_texts', JSON.stringify(data));
+            renderWaitingDisplay();
+        });
+
+        socket.on('yeni_anket_geldi', (poll) => { 
+            sceneState.activePoll = poll; 
+            renderPollUserUI(poll); 
+        });
+
         socket.on('anket_temizle', (winner) => {
             sceneState.activePoll = null;
             document.getElementById('options').innerHTML = '';
             document.getElementById('status').innerHTML = `<span style="color:var(--success)">Kazanan:</span><br>${winner}`;
-            setTimeout(() => { if(sceneState.active) document.getElementById('status').innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; }, 8000);
+            setTimeout(() => { 
+                if(sceneState.active) document.getElementById('status').innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; 
+            }, 8000);
         });
 
         function openPollCategories() {
@@ -398,20 +438,28 @@
             const cont = document.getElementById('poll-cat-list');
             cont.innerHTML = categories.filter(c => !sceneState.currentExCats.includes(c.id)).map(c => `<button class="menu-btn" style="background:var(--warning)" onclick="renderPollOptions(${c.id}, '${c.name}')">${c.name}</button>`).join('');
         }
+
         function renderPollOptions(catId, catName) {
             document.getElementById('poll-cat-title').innerText = catName.toUpperCase();
+            document.getElementById('poll-cat-title').dataset.catname = catName; // Kategori adını sakla
             const cont = document.getElementById('poll-options-container');
             cont.innerHTML = allSongs.filter(s => s.catId === catId && !sceneState.currentExSongs.includes(s.id) && !sceneState.playedSongIds.includes(s.id)).map(s => `<label class="check-item"><input type="checkbox" class="poll-choice" value="${s.id}" data-name="${s.name}"> ${s.name}</label>`).join('');
             switchLayer('layer-poll-create', ' / SEÇENEKLER');
         }
+
         function publishPoll() {
             const sel = Array.from(document.querySelectorAll('.poll-choice:checked'));
             if(sel.length < 2) return alert("En az 2 şarkı!");
-            const pollData = { options: sel.map(x => ({id: parseInt(x.value), name: x.dataset.name})), votes: {} };
+            const pollData = { 
+                category: document.getElementById('poll-cat-title').dataset.catname,
+                options: sel.map(x => ({id: parseInt(x.value), name: x.dataset.name})), 
+                votes: {} 
+            };
             pollData.options.forEach(o => pollData.votes[o.id] = 0);
             socket.emit('anket_yayinla', pollData);
             closeAdmin();
         }
+
         function renderPollUserUI(poll) {
             const cont = document.getElementById('options'); cont.innerHTML = '';
             document.getElementById('status').innerText = "SIRADAKİ ŞARKIYI SEÇİN";
@@ -421,27 +469,52 @@
                 cont.appendChild(b);
             });
         }
+
         function renderResults() {
             switchLayer('layer-results', ' / SONUÇLAR');
             const cont = document.getElementById('active-poll-results');
-            if(!sceneState.activePoll) { cont.innerHTML = 'Aktif anket yok.'; return; }
-            document.getElementById('btn-end-poll').style.display = 'block';
-            let total = Object.values(sceneState.activePoll.votes).reduce((a,b)=>a+b, 0);
-            cont.innerHTML = sceneState.activePoll.options.map(o => {
-                let v = sceneState.activePoll.votes[o.id] || 0;
-                let p = total > 0 ? Math.round((v/total)*100) : 0;
-                return `<div style="margin-bottom:10px;">${o.name}: %${p} (${v} oy)</div>`;
-            }).join('');
+            if(!sceneState.activePoll) { cont.innerHTML = 'Aktif anket yok.'; }
+            else {
+                document.getElementById('btn-end-poll').style.display = 'block';
+                let total = Object.values(sceneState.activePoll.votes).reduce((a,b)=>a+b, 0);
+                cont.innerHTML = sceneState.activePoll.options.map(o => {
+                    let v = sceneState.activePoll.votes[o.id] || 0;
+                    let p = total > 0 ? Math.round((v/total)*100) : 0;
+                    return `<div style="margin-bottom:10px;">${o.name}: %${p} (${v} oy)</div>`;
+                }).join('');
+            }
+            renderHistoryUI();
         }
+
+        function renderHistoryUI() {
+            const histList = document.getElementById('poll-history-list');
+            histList.innerHTML = pollHistory.map((h, idx) => `
+                <div class="poll-history-item">
+                    ${idx + 1}. Anket - ${h.cat} - <b>${h.winner}</b>
+                </div>
+            `).join('');
+        }
+
         function endPoll() {
             const p = sceneState.activePoll;
             const winner = p.options.reduce((a,b) => (p.votes[a.id]||0) >= (p.votes[b.id]||0) ? a : b);
+            
+            // Tarihçeye ekle
+            pollHistory.push({
+                cat: p.category,
+                winner: winner.name
+            });
+            saveData();
+            
             sceneState.playedSongIds.push(winner.id);
             socket.emit('anketi_bitir_sinyali', winner.name);
             closeAdmin();
         }
 
-        window.onload = renderWaitingDisplay;
+        window.onload = () => {
+            renderWaitingDisplay();
+            // Sayfa açıldığında anket geçmişini de temizlemek isterseniz saveData()'dan önce pollHistory = [] yapabilirsiniz.
+        };
     </script>
 </body>
 </html>
