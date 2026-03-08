@@ -47,8 +47,12 @@
         .align-btn { color: #64748b; cursor: pointer; font-size: 1rem; }
         .align-btn.active { color: var(--info); }
         
-        .poll-btn { background: rgba(79, 70, 229, 0.2); border: 2px solid var(--primary); color: white; padding: 20px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; cursor: pointer; width: 300px; margin-bottom: 15px; }
+        .poll-btn { background: rgba(79, 70, 229, 0.2); border: 2px solid var(--primary); color: white; padding: 20px; border-radius: 15px; font-size: 1.2rem; font-weight: 700; cursor: pointer; width: 300px; margin-bottom: 15px; position: relative; overflow: hidden; }
+        .poll-btn .progress-bg { position: absolute; left: 0; top: 0; height: 100%; background: rgba(79, 70, 229, 0.4); z-index: -1; transition: width 0.3s ease; }
         .sticky-bottom-btn { position: fixed; bottom: 25px; left: 50%; transform: translateX(-50%); width: calc(100% - 50px); max-width: 550px; }
+
+        /* Yeni Eklenen Stiller */
+        .song-cat-select { background: #0f172a; color: #94a3b8; border: 1px solid #334155; border-radius: 4px; padding: 4px; font-size: 0.8rem; }
     </style>
 </head>
 <body onclick="handleGlobalClick(event)">
@@ -104,7 +108,7 @@
             <button class="menu-btn" style="background:var(--success); margin-bottom:15px;" onclick="toggleForm('add-song-form')">+ YENİ ŞARKI</button>
             <div id="add-song-form" style="display:none; padding:15px; background:#1e293b; border-radius:12px; margin-bottom:15px;">
                 <input type="text" id="new-song-name" placeholder="Şarkı Adı" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; border:none; background:#0f172a; color:white;">
-                <select id="new-song-cat" style="width:100%; padding:12px; margin-bottom:10px; border-radius:8px; background:#0f172a; color:white; border:none;"></select>
+                <select id="new-song-cat" class="song-cat-select" style="width:100%; padding:12px; margin-bottom:10px;"></select>
                 <button class="menu-btn" style="background:var(--success); width:100%;" onclick="saveNewSong()">KAYDET</button>
             </div>
             <div id="songs-list-container"></div>
@@ -149,7 +153,7 @@
         let categories = JSON.parse(localStorage.getItem('rep_cats') || '[]');
         let allSongs = JSON.parse(localStorage.getItem('rep_songs') || '[]');
         let mekanlar = JSON.parse(localStorage.getItem('mekan_sablonlari') || '[]');
-        let sceneState = { active: false, currentExCats: [], currentExSongs: [], playedSongIds: [], activePoll: null };
+        let sceneState = { active: false, currentExCats: [], currentExSongs: [], playedSongIds: [], activePoll: null, hasVoted: false };
         let editingMekanIndex = null;
 
         function saveData() {
@@ -177,21 +181,161 @@
             }
         }
 
+        // --- KATEGORİ VE ŞARKI GÜNCELLEMELERİ ---
+
         function renderCategories() {
             switchLayer('layer-categories', ' / KATEGORİLER');
             const list = document.getElementById('category-list');
             list.innerHTML = categories.map(c => `
                 <div class="cat-item">
-                    <div class="item-header" onclick="showConfirm('cat-confirm-${c.id}')">
+                    <div class="item-header" onclick="toggleCatActions(${c.id})">
                         <span>${c.name.toUpperCase()}</span>
-                        <i class="fas fa-trash-alt" style="color:var(--danger)"></i>
+                        <i class="fas fa-chevron-down"></i>
                     </div>
-                    <div id="cat-confirm-${c.id}" class="confirm-area">
-                        <button class="menu-btn" style="background:var(--danger); padding:8px;" onclick="deleteCategory(${c.id})">SİL</button>
+                    <div id="cat-actions-${c.id}" class="confirm-area" style="background:rgba(30,41,59,0.8); border-top:1px solid #334155;">
+                        <button class="menu-btn" style="background:var(--success); margin-bottom:10px;" onclick="openAddSongToCat(${c.id})">+ ŞARKI EKLE</button>
+                        <button class="menu-btn" style="background:var(--danger);" onclick="showConfirm('cat-del-confirm-${c.id}')">KATEGORİYİ SİL</button>
+                        <div id="cat-del-confirm-${c.id}" class="confirm-area" style="margin-top:10px;">
+                            <p>Emin misiniz?</p>
+                            <button class="menu-btn" style="background:var(--danger);" onclick="deleteCategory(${c.id})">EVET, SİL</button>
+                        </div>
+                    </div>
+                    <div id="cat-song-adder-${c.id}" class="confirm-area" style="background:var(--dark);">
+                        <div id="unassigned-songs-${c.id}" class="check-list-container"></div>
+                        <button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="toggleCatActions(${c.id})">KAPAT</button>
                     </div>
                 </div>
             `).join('');
         }
+
+        function toggleCatActions(id) {
+            document.querySelectorAll('.confirm-area').forEach(a => a.style.display = 'none');
+            const el = document.getElementById(`cat-actions-${id}`);
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function openAddSongToCat(catId) {
+            document.getElementById(`cat-actions-${catId}`).style.display = 'none';
+            const adder = document.getElementById(`cat-song-adder-${catId}`);
+            adder.style.display = 'block';
+            const list = document.getElementById(`unassigned-songs-${catId}`);
+            const unassigned = allSongs.filter(s => s.catId === null);
+            
+            if(unassigned.length === 0) {
+                list.innerHTML = '<p style="padding:10px;">Kategorisiz şarkı bulunamadı.</p>';
+            } else {
+                list.innerHTML = unassigned.map(s => `
+                    <div class="check-item" onclick="assignSongToCat(${s.id}, ${catId})">
+                        <i class="fas fa-plus-circle" style="color:var(--success)"></i> ${s.name}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function assignSongToCat(songId, catId) {
+            const song = allSongs.find(s => s.id === songId);
+            if(song) song.catId = catId;
+            saveData();
+            openAddSongToCat(catId);
+        }
+
+        function renderSongs() {
+            switchLayer('layer-songs', ' / ŞARKILAR');
+            const cont = document.getElementById('songs-list-container');
+            cont.innerHTML = allSongs.sort((a,b)=>a.name.localeCompare(b.name)).map(s => `
+                <div class="cat-item" style="margin-bottom:5px;">
+                    <div style="padding:12px; display:flex; justify-content:space-between; align-items:center; gap:10px;">
+                        <span style="flex:1;">${s.name}</span>
+                        <select class="song-cat-select" onchange="updateSongCat(${s.id}, this.value)">
+                            <option value="null" ${s.catId === null ? 'selected' : ''}>Kategorisiz</option>
+                            ${categories.map(c => `<option value="${c.id}" ${s.catId === c.id ? 'selected' : ''}>${c.name}</option>`).join('')}
+                        </select>
+                        <i class="fas fa-trash-alt" style="color:var(--danger); cursor:pointer;" onclick="showConfirm('song-confirm-${s.id}')"></i>
+                    </div>
+                    <div id="song-confirm-${s.id}" class="confirm-area">
+                        <button class="menu-btn" style="background:var(--danger); padding:8px;" onclick="allSongs=allSongs.filter(x=>x.id!==${s.id});saveData();renderSongs();">SİLİNSİN Mİ? (ONAY)</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function updateSongCat(songId, catVal) {
+            const song = allSongs.find(s => s.id === songId);
+            if(song) song.catId = catVal === 'null' ? null : parseInt(catVal);
+            saveData();
+        }
+
+        // --- ANKET VE SONUÇ SİSTEMİ ---
+
+        socket.on('yeni_anket_geldi', (poll) => { 
+            sceneState.activePoll = poll; 
+            sceneState.hasVoted = false;
+            renderPollUserUI(); 
+        });
+
+        socket.on('oy_guncellendi', (poll) => {
+            sceneState.activePoll = poll;
+            if(sceneState.hasVoted) renderPollUserUI(); // Oy verdiyse canlı sonuçları görsün
+            if(document.getElementById('layer-results').style.display === 'block') renderResults();
+        });
+
+        socket.on('anket_temizle', (winner) => {
+            sceneState.activePoll = null;
+            const statusEl = document.getElementById('status');
+            const optionsEl = document.getElementById('options');
+            
+            optionsEl.innerHTML = '';
+            statusEl.innerHTML = `<span style="color:var(--success); font-size:1.4rem;">KAZANAN</span><br><div style="font-size:2.5rem; margin-top:10px;">${winner}</div>`;
+            
+            setTimeout(() => { 
+                if(sceneState.active) {
+                    statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+                } else {
+                    statusEl.style.display = 'none';
+                }
+            }, 10000); // 10 saniye bekler
+        });
+
+        function renderPollUserUI() {
+            const poll = sceneState.activePoll;
+            if(!poll) return;
+            
+            const cont = document.getElementById('options');
+            document.getElementById('status').innerText = "SIRADAKİ ŞARKI ?";
+            document.getElementById('status').style.display = 'block';
+            cont.innerHTML = '';
+
+            let total = Object.values(poll.votes).reduce((a,b)=>a+b, 0);
+
+            poll.options.forEach(o => {
+                const v = poll.votes[o.id] || 0;
+                const p = total > 0 ? Math.round((v/total)*100) : 0;
+                
+                const b = document.createElement('button');
+                b.className = 'poll-btn';
+                
+                if(!sceneState.hasVoted) {
+                    b.innerHTML = o.name;
+                    b.onclick = () => { 
+                        sceneState.hasVoted = true;
+                        socket.emit('oy_ver', o.id); 
+                    };
+                } else {
+                    // Canlı Sonuç Görünümü
+                    b.innerHTML = `
+                        <div class="progress-bg" style="width:${p}%"></div>
+                        <div style="display:flex; justify-content:space-between; width:100%; position:relative; z-index:2;">
+                            <span>${o.name}</span>
+                            <span>%${p}</span>
+                        </div>
+                    `;
+                    b.style.cursor = 'default';
+                }
+                cont.appendChild(b);
+            });
+        }
+
+        // --- DİĞER FONKSİYONLAR (DEĞİŞMEYENLER) ---
 
         function saveNewCategory() {
             const n = document.getElementById('new-cat-name').value.trim();
@@ -344,21 +488,8 @@
 
         function showConfirm(id) {
             document.querySelectorAll('.confirm-area').forEach(a => a.style.display = 'none');
-            document.getElementById(id).style.display = 'block';
-        }
-
-        function renderSongs() {
-            switchLayer('layer-songs', ' / ŞARKILAR');
-            const cont = document.getElementById('songs-list-container');
-            cont.innerHTML = allSongs.sort((a,b)=>a.name.localeCompare(b.name)).map(s => `
-                <div style="background:#1e293b; padding:12px; margin-bottom:5px; border-radius:8px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>${s.name}</span>
-                    <div onclick="showConfirm('song-confirm-${s.id}')" style="cursor:pointer;"><i class="fas fa-trash-alt" style="color:var(--danger)"></i></div>
-                    <div id="song-confirm-${s.id}" class="confirm-area" style="width:100%; margin-top:10px; display:none;">
-                        <button class="menu-btn" style="background:var(--danger); padding:8px;" onclick="allSongs=allSongs.filter(x=>x.id!==${s.id});saveData();renderSongs();">SİL</button>
-                    </div>
-                </div>
-            `).join('');
+            const el = document.getElementById(id);
+            if(el) el.style.display = 'block';
         }
 
         function saveNewSong() {
@@ -385,14 +516,6 @@
             document.getElementById('btn-rep-edit').style.display = active ? 'none' : 'flex';
         }
 
-        socket.on('yeni_anket_geldi', (poll) => { sceneState.activePoll = poll; renderPollUserUI(poll); });
-        socket.on('anket_temizle', (winner) => {
-            sceneState.activePoll = null;
-            document.getElementById('options').innerHTML = '';
-            document.getElementById('status').innerHTML = `<span style="color:var(--success)">Kazanan:</span><br>${winner}`;
-            setTimeout(() => { if(sceneState.active) document.getElementById('status').innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; }, 8000);
-        });
-
         function openPollCategories() {
             switchLayer('layer-poll-cats', ' / ANKET');
             const cont = document.getElementById('poll-cat-list');
@@ -411,15 +534,6 @@
             pollData.options.forEach(o => pollData.votes[o.id] = 0);
             socket.emit('anket_yayinla', pollData);
             closeAdmin();
-        }
-        function renderPollUserUI(poll) {
-            const cont = document.getElementById('options'); cont.innerHTML = '';
-            document.getElementById('status').innerText = "SIRADAKİ ŞARKIYI SEÇİN";
-            poll.options.forEach(o => {
-                const b = document.createElement('button'); b.className = 'poll-btn'; b.innerText = o.name;
-                b.onclick = () => { socket.emit('oy_ver', o.id); cont.innerHTML = `<h3 style="color:var(--success)">Oyunuz Alındı!</h3>`; };
-                cont.appendChild(b);
-            });
         }
         function renderResults() {
             switchLayer('layer-results', ' / SONUÇLAR');
