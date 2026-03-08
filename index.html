@@ -1,318 +1,121 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hızlı Anket - Canlı Sahne</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-        :root {
-            --primary: #4f46e5; --danger: #ef4444; --info: #3b82f6;
-            --success: #10b981; --warning: #f59e0b; --dark: #0f172a;
-            --input-bg: #1e293b; --main-font: 'Segoe UI', sans-serif;
+<script>
+    const socket = io();
+    let categories = JSON.parse(localStorage.getItem('rep_cats') || '[]');
+    let allSongs = JSON.parse(localStorage.getItem('rep_songs') || '[]');
+    let sceneActive = false;
+    let currentPoll = null;
+
+    // --- SOCKET EVENTLERI ---
+
+    // Sahne durumunu tüm cihazlarda senkronize eder
+    socket.on('sahne_durumu_guncelle', (isActive) => {
+        sceneActive = isActive;
+        const statusEl = document.getElementById('status');
+        if (isActive) {
+            statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+            statusEl.style.display = 'block';
+        } else {
+            statusEl.style.display = 'none';
         }
-        body { font-family: var(--main-font); margin: 0; background: url('image1.png') no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; position: relative; background-color: #000; }
-        body::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: -1; }
-        
-        #waiting-display { position: fixed; top: 60px; left: 80px; width: calc(50% - 80px); text-align: left; z-index: 5; pointer-events: none; }
-        .display-line { min-height: 1.5rem; font-size: 1.2rem; font-weight: 700; color: #ffffff; text-shadow: 2px 2px 4px rgba(0,0,0,0.9); margin-bottom: 6px; letter-spacing: -0.2px; line-height: 1.2; width: 100%; }
-        
-        .container { position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; padding: 20px; text-align: center; }
-        h2#status { font-size: 2.2rem; text-shadow: 0 4px 10px rgba(0,0,0,0.7); margin-bottom: 30px; line-height: 1.4; }
-        
-        .admin-trigger { position: fixed; top: 20px; right: 20px; font-size: 1.8rem; opacity: 0.05; cursor: pointer; z-index: 9999; color: white; }
-        
-        #admin-panel { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--dark); z-index: 10000; padding: 25px; overflow-y: auto; }
-        .admin-layer { display: none; max-width: 600px; margin: 0 auto; width: 100%; padding-bottom: 100px; }
-        .active-layer { display: block; }
-        
-        .menu-grid { display: grid; gap: 12px; margin-top: 20px; }
-        .menu-btn { padding: 16px; font-size: 0.9rem; font-weight: 800; border: none; border-radius: 12px; cursor: pointer; text-transform: uppercase; color: white; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
-        
-        .cat-item { background: #1e293b; border-radius: 12px; margin-bottom: 10px; border: 1px solid #334155; }
-        .item-header { padding: 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .confirm-area { display: none; background: rgba(15, 23, 42, 0.95); padding: 15px; border-top: 1px solid #334155; }
-        
-        .poll-btn { background: rgba(79, 70, 229, 0.15); border: 2px solid var(--primary); color: white; padding: 22px; border-radius: 15px; font-size: 1.3rem; font-weight: 700; cursor: pointer; width: 320px; margin-bottom: 15px; position: relative; overflow: hidden; transition: all 0.2s; }
-        .poll-btn .progress-bg { position: absolute; left: 0; top: 0; height: 100%; background: rgba(79, 70, 229, 0.5); z-index: -1; transition: width 0.4s ease-out; }
-        
-        .input-group { display: flex; align-items: center; background: var(--input-bg); margin-bottom: 8px; border-radius: 10px; padding: 5px 10px; border: 1px solid #334155; }
-        .input-group input { background: none; border: none; color: white; padding: 12px; flex: 1; outline: none; }
-        .align-btn { color: #64748b; margin: 0 5px; cursor: pointer; }
-        .align-btn.active { color: var(--info); }
-        .check-list-container { background: #1e293b; border-radius: 12px; padding: 15px; max-height: 350px; overflow-y: auto; text-align: left; }
-        .check-item { display: flex; align-items: center; gap: 10px; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-    </style>
-</head>
-<body>
+        updateAdminUI();
+    });
 
-    <div id="waiting-display"></div>
+    socket.on('bekleme_guncelle', (data) => {
+        localStorage.setItem('waiting_texts', JSON.stringify(data));
+        renderWaitingDisplay(); // Tüm cihazlarda metinler anında güncellenir
+    });
 
-    <div class="container">
-        <h2 id="status">Bir sonraki oylama gelene kadar müziğin keyfini çıkar</h2>
-        <div id="options"></div>
-        <i class="fas fa-cog admin-trigger" onclick="openAdmin()"></i>
-    </div>
+    socket.on('anket_temizle', (winner) => {
+        currentPoll = null;
+        const statusEl = document.getElementById('status');
+        document.getElementById('options').innerHTML = '';
+        if(winner) {
+            statusEl.innerHTML = `<span style="color:var(--success)">KAZANAN</span><br><div style="font-size:3rem">${winner}</div>`;
+            setTimeout(() => { if(sceneActive) statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; }, 10000);
+        } else {
+            statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+        }
+    });
 
-    <div id="admin-panel">
-        <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
-            <div style="font-weight:800; color:#818cf8;">YÖNETİCİ <span id="admin-sub"></span></div>
-            <i class="fas fa-times-circle" style="font-size:2rem; cursor:pointer;" onclick="closeAdmin()"></i>
-        </div>
+    // --- ANA FONKSİYONLAR ---
 
-        <div id="layer-menu" class="admin-layer active-layer">
-            <div id="scene-status" style="display:none; background:rgba(16,185,129,0.1); color:var(--success); padding:10px; text-align:center; border-radius:8px; margin-bottom:10px; font-weight:800;">SAHNE AKTİF</div>
-            <div class="menu-grid">
-                <button id="btn-start" class="menu-btn" style="background:var(--success);" onclick="startScene()">SAHNE BAŞLAT</button>
-                <button id="btn-poll" class="menu-btn" style="background:var(--primary); display:none;" onclick="openPollCats()">ANKET OLUŞTUR</button>
-                <button id="btn-rep" class="menu-btn" style="background:var(--warning);" onclick="switchLayer('layer-rep', '/ REPERTUAR')">REPERTUAR DÜZENLE</button>
-                <button class="menu-btn" style="background:var(--info);" onclick="openWaitingEdit()">BEKLEME EKRANI DÜZENLE</button>
-                <button id="btn-stop" class="menu-btn" style="background:var(--danger); display:none;" onclick="stopScene()">SAHNEYİ BİTİR</button>
+    function startScene() {
+        socket.emit('sahne_durumu_degistir', true); // Tüm cihazlara "sahne başladı" der
+        closeAdmin();
+    }
+
+    function stopScene() {
+        if(confirm("Sahne bitirilsin mi?")) {
+            socket.emit('sahne_durumu_degistir', false);
+            socket.emit('anketi_bitir_sinyali', null);
+        }
+    }
+
+    // Kategori Silme: Onay mekanizmalı ve şarkıları koruyan sistem
+    function deleteCat(catId) {
+        // 1. Kategoriyi sil
+        categories = categories.filter(c => c.id !== catId);
+        
+        // 2. Bu kategoriye ait şarkıları "kategorisiz" (null) yap
+        allSongs = allSongs.map(s => {
+            if (s.catId === catId) return { ...s, catId: null };
+            return s;
+        });
+
+        saveData();
+        renderCategories(); // Listeyi tazele
+        alert("Kategori silindi, şarkılar 'Kategorisiz' olarak korundu.");
+    }
+
+    function saveWaiting() {
+        const data = [];
+        for(let i=1; i<=10; i++) {
+            const inp = document.getElementById(`w-in-${i}`);
+            data.push({text: inp.value, align: inp.dataset.align});
+        }
+        socket.emit('bekleme_yayinla', data); // Bu satır sayesinde her cihazda adminin ayarı görünür
+        switchLayer('layer-menu', '');
+    }
+
+    // --- UI GÜNCELLEMELERİ ---
+    function renderCategories() {
+        switchLayer('layer-cats', '/ KATEGORİLER');
+        const cont = document.getElementById('cat-list');
+        cont.innerHTML = categories.map(c => `
+            <div class="cat-item">
+                <div class="item-header" onclick="toggleActions('cat-${c.id}')">
+                    <span>${c.name.toUpperCase()}</span><i class="fas fa-chevron-down"></i>
+                </div>
+                <div id="cat-${c.id}" class="confirm-area">
+                    <button class="menu-btn" style="background:var(--success); margin-bottom:5px;" onclick="openAddSongToCat(${c.id})">ŞARKI EKLE</button>
+                    <button class="menu-btn" style="background:var(--danger)" onclick="toggleActions('conf-del-${c.id}')">KATEGORİYİ SİL</button>
+                    <div id="conf-del-${c.id}" style="display:none; padding:10px; background:rgba(239, 68, 68, 0.1); border-radius:8px; margin-top:5px;">
+                        <p style="font-size:0.8rem; margin-bottom:5px;">Emin misiniz? Şarkılar silinmez.</p>
+                        <button class="menu-btn" style="background:var(--danger); font-size:0.7rem;" onclick="deleteCat(${c.id})">EVET, SİL</button>
+                    </div>
+                </div>
             </div>
-        </div>
+        `).join('');
+    }
 
-        <div id="layer-waiting" class="admin-layer">
-            <div id="waiting-inputs"></div>
-            <button class="menu-btn" style="background:var(--success); margin-top:15px;" onclick="saveWaiting()">KAYDET VE YAYINLA</button>
-            <button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-menu','')">İPTAL</button>
-        </div>
+    function updateAdminUI() {
+        const sStatus = document.getElementById('scene-status');
+        if(sStatus) sStatus.style.display = sceneActive ? 'block' : 'none';
+        document.getElementById('btn-start').style.display = sceneActive ? 'none' : 'flex';
+        document.getElementById('btn-poll').style.display = sceneActive ? 'flex' : 'none';
+        document.getElementById('btn-stop').style.display = sceneActive ? 'flex' : 'none';
+        document.getElementById('btn-rep').style.display = sceneActive ? 'none' : 'flex';
+    }
 
-        <div id="layer-rep" class="admin-layer">
-            <div class="menu-grid">
-                <button class="menu-btn" style="background:var(--warning);" onclick="renderCategories()">KATEGORİLER</button>
-                <button class="menu-btn" style="background:var(--info);" onclick="renderSongs()">ŞARKILAR</button>
-                <button class="menu-btn" style="background:#334155;" onclick="switchLayer('layer-menu','')">GERİ</button>
-            </div>
-        </div>
-        
-        <div id="layer-cats" class="admin-layer"><div id="cat-list"></div><button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-rep','')">GERİ</button></div>
-        <div id="layer-songs" class="admin-layer"><div id="song-list"></div><button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-rep','')">GERİ</button></div>
-        <div id="layer-poll-cats" class="admin-layer"><div id="poll-cat-list" class="menu-grid"></div><button class="menu-btn" style="background:#334155; margin-top:10px;" onclick="switchLayer('layer-menu','')">İPTAL</button></div>
-        <div id="layer-poll-create" class="admin-layer"><h3 id="poll-title"></h3><div id="poll-opts" class="check-list-container"></div><button class="menu-btn" style="background:var(--primary); margin-top:15px;" onclick="publishPoll()">ANKETİ YAYINLA</button></div>
-    </div>
+    function toggleActions(id) {
+        const el = document.getElementById(id);
+        const isVisible = el.style.display === 'block';
+        // Diğer açık onay kutularını kapatmak istersen burayı düzenleyebilirsin
+        el.style.display = isVisible ? 'none' : 'block';
+    }
 
-    <script>
-        const socket = io();
-        let categories = JSON.parse(localStorage.getItem('rep_cats') || '[]');
-        let allSongs = JSON.parse(localStorage.getItem('rep_songs') || '[]');
-        let sceneActive = false;
-        let hasVoted = false;
-        let currentPoll = null;
-
-        // --- SOCKET OLAYLARI ---
-
-        socket.on('yeni_anket_geldi', (poll) => {
-            currentPoll = poll;
-            hasVoted = false;
-            renderUserUI();
-        });
-
-        socket.on('oy_guncellendi', (poll) => {
-            currentPoll = poll;
-            if(hasVoted) renderUserUI(); 
-        });
-
-        socket.on('anket_temizle', (winner) => {
-            currentPoll = null;
-            const statusEl = document.getElementById('status');
-            document.getElementById('options').innerHTML = '';
-            
-            if(winner) {
-                statusEl.innerHTML = `<span style="color:var(--success)">KAZANAN</span><br><div style="font-size:3rem">${winner}</div>`;
-                setTimeout(() => {
-                    statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
-                }, 10000);
-            } else {
-                statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
-            }
-        });
-
-        socket.on('bekleme_guncelle', (data) => {
-            localStorage.setItem('waiting_texts', JSON.stringify(data));
-            renderWaitingDisplay();
-        });
-
-        // --- KULLANICI ARAYÜZÜ ---
-
-        function renderUserUI() {
-            const cont = document.getElementById('options');
-            const statusEl = document.getElementById('status');
-            if(!currentPoll) return;
-
-            statusEl.innerText = "SIRADAKİ ŞARKI ?";
-            cont.innerHTML = '';
-            
-            let totalVotes = Object.values(currentPoll.votes).reduce((a, b) => a + b, 0);
-
-            currentPoll.options.forEach(o => {
-                const votes = currentPoll.votes[o.id] || 0;
-                const pct = totalVotes > 0 ? Math.round((votes/totalVotes)*100) : 0;
-                
-                const btn = document.createElement('button');
-                btn.className = 'poll-btn';
-                
-                if(!hasVoted) {
-                    btn.innerText = o.name;
-                    btn.onclick = () => { hasVoted = true; socket.emit('oy_ver', o.id); };
-                } else {
-                    btn.innerHTML = `<div class="progress-bg" style="width:${pct}%"></div>
-                                     <div style="display:flex; justify-content:space-between; width:100%; position:relative; z-index:2">
-                                     <span>${o.name}</span><span>%${pct}</span></div>`;
-                    btn.style.cursor = 'default';
-                }
-                cont.appendChild(btn);
-            });
-        }
-
-        // --- ADMIN FONKSİYONLARI ---
-
-        function startScene() {
-            sceneActive = true;
-            document.getElementById('status').style.display = 'block';
-            updateAdminUI();
-            closeAdmin();
-        }
-
-        function stopScene() {
-            if(confirm("Sahne bitirilsin mi?")) {
-                sceneActive = false;
-                socket.emit('anketi_bitir_sinyali', null);
-                updateAdminUI();
-            }
-        }
-
-        function openWaitingEdit() {
-            switchLayer('layer-waiting', '/ BEKLEME EKRANI');
-            const cont = document.getElementById('waiting-inputs');
-            cont.innerHTML = '';
-            const saved = JSON.parse(localStorage.getItem('waiting_texts') || '[]');
-            for(let i=1; i<=10; i++) {
-                const d = saved[i-1] || {text:'', align:'left'};
-                cont.innerHTML += `
-                    <div class="input-group">
-                        <input type="text" id="w-in-${i}" value="${d.text}" data-align="${d.align}">
-                        <i class="fas fa-align-left align-btn ${d.align==='left'?'active':''}" onclick="setWAlign(${i},'left')"></i>
-                        <i class="fas fa-align-center align-btn ${d.align==='center'?'active':''}" onclick="setWAlign(${i},'center')"></i>
-                        <i class="fas fa-align-right align-btn ${d.align==='right'?'active':''}" onclick="setWAlign(${i},'right')"></i>
-                    </div>`;
-            }
-        }
-
-        function setWAlign(idx, align) {
-            const inp = document.getElementById(`w-in-${idx}`);
-            inp.dataset.align = align;
-            const parent = inp.parentElement;
-            parent.querySelectorAll('.align-btn').forEach(b => b.classList.remove('active'));
-            parent.querySelector(`.fa-align-${align}`).classList.add('active');
-        }
-
-        function saveWaiting() {
-            const data = [];
-            for(let i=1; i<=10; i++) {
-                const inp = document.getElementById(`w-in-${i}`);
-                data.push({text: inp.value, align: inp.dataset.align});
-            }
-            socket.emit('bekleme_yayinla', data); // TÜM CİHAZLARA GÖNDERİR
-            switchLayer('layer-menu', '');
-        }
-
-        function renderWaitingDisplay() {
-            const cont = document.getElementById('waiting-display');
-            cont.innerHTML = '';
-            const saved = JSON.parse(localStorage.getItem('waiting_texts') || '[]');
-            saved.forEach(d => {
-                if(d.text.trim()) cont.innerHTML += `<div class="display-line" style="text-align:${d.align}">${d.text}</div>`;
-            });
-        }
-
-        // --- KATEGORİ VE ŞARKI YÖNETİMİ ---
-
-        function renderCategories() {
-            switchLayer('layer-cats', '/ KATEGORİLER');
-            const cont = document.getElementById('cat-list');
-            cont.innerHTML = categories.map(c => `
-                <div class="cat-item">
-                    <div class="item-header" onclick="toggleActions('cat-${c.id}')">
-                        <span>${c.name.toUpperCase()}</span><i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div id="cat-${c.id}" class="confirm-area">
-                        <button class="menu-btn" style="background:var(--success); margin-bottom:5px;" onclick="openAddSongToCat(${c.id})">ŞARKI EKLE</button>
-                        <button class="menu-btn" style="background:var(--danger)" onclick="deleteCat(${c.id})">KATEGORİYİ SİL</button>
-                    </div>
-                    <div id="adder-${c.id}" class="confirm-area">
-                        <div class="check-list-container" id="un-list-${c.id}"></div>
-                        <button class="menu-btn" style="background:#334155; margin-top:5px;" onclick="renderCategories()">KAPAT</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function openAddSongToCat(catId) {
-            document.querySelectorAll('.confirm-area').forEach(a => a.style.display = 'none');
-            document.getElementById(`adder-${catId}`).style.display = 'block';
-            const unassigned = allSongs.filter(s => s.catId === null);
-            document.getElementById(`un-list-${catId}`).innerHTML = unassigned.map(s => `
-                <div class="check-item" onclick="assignSong(${s.id}, ${catId})">
-                    <i class="fas fa-plus-circle" style="color:var(--success)"></i> ${s.name}
-                </div>
-            `).join('') || 'Kategorisiz şarkı kalmadı.';
-        }
-
-        function assignSong(sid, cid) {
-            const s = allSongs.find(x => x.id === sid);
-            if(s) s.catId = cid;
-            saveData(); openAddSongToCat(cid);
-        }
-
-        function renderSongs() {
-            switchLayer('layer-songs', '/ ŞARKILAR');
-            const cont = document.getElementById('song-list');
-            cont.innerHTML = allSongs.map(s => `
-                <div class="cat-item" style="padding:10px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>${s.name}</span>
-                    <select onchange="updateSongCat(${s.id}, this.value)" style="background:#0f172a; color:white; border:1px solid #444; padding:5px; border-radius:5px;">
-                        <option value="null" ${s.catId===null?'selected':''}>Kategorisiz</option>
-                        ${categories.map(c => `<option value="${c.id}" ${s.catId===c.id?'selected':''}>${c.name}</option>`).join('')}
-                    </select>
-                    <i class="fas fa-trash" style="color:var(--danger)" onclick="confirmDelSong(${s.id})"></i>
-                    <div id="ds-${s.id}" class="confirm-area"><button class="menu-btn" style="background:var(--danger)" onclick="delSong(${s.id})">SİLMEYİ ONAYLA</button></div>
-                </div>
-            `).join('');
-        }
-
-        function updateSongCat(sid, cid) {
-            const s = allSongs.find(x => x.id === sid);
-            s.catId = cid === 'null' ? null : parseInt(cid);
-            saveData();
-        }
-
-        // --- YARDIMCI ARAÇLAR ---
-        function openAdmin() { document.getElementById('admin-panel').style.display='block'; updateAdminUI(); }
-        function closeAdmin() { document.getElementById('admin-panel').style.display='none'; }
-        function switchLayer(id, sub) { 
-            document.querySelectorAll('.admin-layer').forEach(l => l.classList.remove('active-layer'));
-            document.getElementById(id).classList.add('active-layer');
-            document.getElementById('admin-sub').innerText = sub;
-        }
-        function updateAdminUI() {
-            document.getElementById('scene-status').style.display = sceneActive ? 'block' : 'none';
-            document.getElementById('btn-start').style.display = sceneActive ? 'none' : 'flex';
-            document.getElementById('btn-poll').style.display = sceneActive ? 'flex' : 'none';
-            document.getElementById('btn-stop').style.display = sceneActive ? 'flex' : 'none';
-            document.getElementById('btn-rep').style.display = sceneActive ? 'none' : 'flex';
-        }
-        function toggleActions(id) {
-            const el = document.getElementById(id);
-            const isVisible = el.style.display === 'block';
-            document.querySelectorAll('.confirm-area').forEach(a => a.style.display = 'none');
-            el.style.display = isVisible ? 'none' : 'block';
-        }
-        function saveData() {
-            localStorage.setItem('rep_cats', JSON.stringify(categories));
-            localStorage.setItem('rep_songs', JSON.stringify(allSongs));
-        }
-        window.onload = renderWaitingDisplay;
-    </script>
-</body>
-</html>
+    function saveData() {
+        localStorage.setItem('rep_cats', JSON.stringify(categories));
+        localStorage.setItem('rep_songs', JSON.stringify(allSongs));
+    }
+</script>
