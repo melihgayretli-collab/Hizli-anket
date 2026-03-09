@@ -59,7 +59,6 @@ function openAdmin() {
 function closeAdmin() {
   document.getElementById('layer-admin').style.display = 'none';
 }
-</script>
 
 function startScene() {
   const pass = prompt("Sahne başlat şifresi:");
@@ -75,4 +74,32 @@ function startScene() {
 
 function stopScene() {
   const pass = prompt("Sahne bitir şifresi:");
-  if(pass !== "
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
+  socket.emit('sahne_durumu_degistir', false);
+  socket.emit('anketi_bitir_sinyali', null);
+  document.getElementById('status').style.display = 'none';
+  document.getElementById('btn-repertuar').style.display = 'block';
+  document.getElementById('btn-results').style.display = 'none';
+  document.getElementById('btn-stop').style.display = 'none';
+  document.getElementById('live-indicator').style.display = 'none';
+}
+
+function toggleMessagePanel() {
+  const panel = document.getElementById('message-panel');
+  panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+}
+
+function publishMessage() {
+  if(isAdmin) {
+    const msg = document.getElementById('msg-input').value;
+    socket.emit('bekleme_mesaji_degistir', msg);
+    document.getElementById('message-panel').style.display = 'none';
+  }
+}
+
+function renderRepertuar() {
+  alert("Repertuar menüsü: Mekan Ayarları, Kategoriler, Şarkılar");
+}
+</script>
+</body>
+</html>
