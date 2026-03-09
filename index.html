@@ -50,7 +50,6 @@
         let allSongs = [];
         let sceneActive = false;
 
-        // --- SUNUCU SENKRONİZASYONU ---
         socket.on('init_data', (data) => {
             categories = data.categories || [];
             allSongs = data.songs || [];
@@ -73,72 +72,4 @@
             `).join('');
         });
 
-        function sendVote(optionId) {
-            socket.emit('oy_ver', optionId);
-            const buttons = document.querySelectorAll('#options .menu-btn');
-            buttons.forEach(btn => { btn.style.opacity = "0.5"; btn.disabled = true; });
-        }
-
-        socket.on('oy_onaylandi', () => alert("Oyunuz başarıyla kaydedildi!"));
-        socket.on('oy_reddedildi', (msg) => alert(msg));
-
-        socket.on('anket_temizle', (winner) => {
-            document.getElementById('options').innerHTML = '';
-            const statusEl = document.getElementById('status');
-            if(winner) {
-                statusEl.innerHTML = `<span style="color:var(--success)">KAZANAN</span><br><div style="font-size:2.5rem">${winner}</div>`;
-                setTimeout(() => { if(sceneActive) statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; }, 5000);
-            } else {
-                statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
-            }
-        });
-
-        // --- FONKSİYONLAR ---
-        function saveData() { socket.emit('update_repertuar', { categories, songs: allSongs }); }
-
-        function startScene() { socket.emit('sahne_durumu_degistir', true); closeAdmin(); }
-        function stopScene() { if(confirm("Sahne bitirilsin mi?")) { socket.emit('sahne_durumu_degistir', false); socket.emit('anketi_bitir_sinyali', null); } }
-
-        function addCategory() {
-            const name = document.getElementById('new-cat-name').value;
-            if(!name) return;
-            categories.push({ id: Date.now(), name: name });
-            document.getElementById('new-cat-name').value = '';
-            saveData();
-            renderCategories();
-        }
-
-        function renderCategories() {
-            document.getElementById('layer-cats').style.display = 'block';
-            const cont = document.getElementById('cat-list');
-            cont.innerHTML = categories.map(c => `
-                <div class="cat-item">
-                    <div class="item-header" onclick="toggleActions('cat-${c.id}')">
-                        <span>${c.name.toUpperCase()}</span><i class="fas fa-chevron-down"></i>
-                    </div>
-                    <div id="cat-${c.id}" class="confirm-area">
-                        <button class="menu-btn" style="background:var(--danger)" onclick="toggleActions('conf-${c.id}')">KATEGORİYİ SİL</button>
-                        <div id="conf-${c.id}" style="display:none; padding:10px; background:rgba(239, 68, 68, 0.1); border-radius:8px; margin-top:5px;">
-                            <p style="font-size:0.8rem; margin-bottom:5px;">Emin misiniz? Şarkılar korunur.</p>
-                            <button class="menu-btn" style="background:var(--danger); font-size:0.7rem;" onclick="deleteCat(${c.id})">EVET, SİL</button>
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        function deleteCat(catId) {
-            categories = categories.filter(c => c.id !== catId);
-            allSongs = allSongs.map(s => (s.catId === catId ? { ...s, catId: null } : s));
-            saveData();
-            renderCategories();
-        }
-
-        function openAdmin() { document.getElementById('layer-admin').style.display = 'block'; }
-        function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
-        function closeLayer(id) { document.getElementById(id).style.display = 'none'; }
-        function toggleActions(id) { const el = document.getElementById(id); el.style.display = el.style.display === 'block' ? 'none' : 'block'; }
-        function updateAdminUI() { document.getElementById('btn-start').style.display = sceneActive ? 'none' : 'flex'; document.getElementById('btn-stop').style.display = sceneActive ? 'flex' : 'none'; }
-    </script>
-</body>
-</html>
+        function sendVote
