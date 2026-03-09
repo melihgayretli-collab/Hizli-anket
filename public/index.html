@@ -30,15 +30,25 @@
             background: var(--primary); border: none; color: white; border-radius: 8px; font-size: 1.2rem;
         }
 
-        /* Admin Paneli (Sadece Yöneticiye Özel) */
+        /* YENİ: Sağ Üst Şeffaf Admin Butonu */
         #admin-panel { 
-            position: fixed; bottom: 20px; right: 20px; z-index: 100;
+            position: fixed; top: 15px; right: 15px; z-index: 100;
         }
-        .admin-btn { background: var(--danger); border: none; padding: 15px; border-radius: 50%; color: white; cursor: pointer; }
+        .admin-btn { 
+            background: transparent; border: none; color: rgba(255, 255, 255, 0.15); /* Neredeyse saydam */
+            font-size: 1.5rem; cursor: pointer; transition: color 0.3s; 
+        }
+        .admin-btn:hover { color: rgba(255, 255, 255, 0.5); }
         
         .modal { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
             background: var(--dark); padding: 20px; border-radius: 10px; z-index: 101; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        }
+
+        input[type="text"], input[type="password"] {
+            width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #334155;
+            background: #1e293b; color: white; box-sizing: border-box;
         }
     </style>
 </head>
@@ -57,7 +67,7 @@
     </div>
 
     <div id="admin-panel">
-        <button class="admin-btn" onclick="toggleAdmin()"><i class="fas fa-cog"></i></button>
+        <button class="admin-btn" onclick="checkAdminPassword()"><i class="fas fa-cog"></i></button>
     </div>
 
     <div id="admin-modal" class="modal">
@@ -65,31 +75,40 @@
         
         <div style="margin-bottom: 20px;">
             <label>Bekleme Metni Gönder:</label>
-            <input type="text" id="new-waiting-msg" style="width:100%; padding:8px; margin-top:5px;">
-            <button onclick="updateWaitingMsg()" style="width:100%; margin-top:5px; background: var(--success); color:white; border:none; padding:8px;">Yayınla</button>
+            <input type="text" id="new-waiting-msg">
+            <button onclick="updateWaitingMsg()" style="width:100%; margin-top:10px; background: var(--success); color:white; border:none; padding:10px; border-radius:5px;">Yayınla</button>
         </div>
 
         <div id="repertuar-ozet">
-            <button onclick="renderAnketSecimi()" style="width:100%; background: var(--primary); color:white; border:none; padding:10px;">Anket Başlat</button>
+            <button onclick="renderAnketSecimi()" style="width:100%; background: var(--primary); color:white; border:none; padding:10px; border-radius:5px;">Anket Başlat</button>
         </div>
         
-        <button onclick="toggleAdmin()" style="width:100%; margin-top:10px;">Kapat</button>
+        <button onclick="closeAdmin()" style="width:100%; margin-top:20px; background:transparent; color:#94a3b8; border:1px solid #334155; padding:8px; border-radius:5px;">Kapat</button>
     </div>
 
     <script>
         const socket = io();
+        const ADMIN_PASS = "1167";
         let db = { categories: [], songs: [] };
 
         socket.on('init_data', data => { db = data; });
 
-        // MESAJ YAYINI: Herkeste aynı metni günceller
+        // Şifre Kontrolü
+        function checkAdminPassword() {
+            const pass = prompt("Yönetici Şifresi:");
+            if (pass === ADMIN_PASS) {
+                toggleAdmin();
+            } else if (pass !== null) {
+                alert("Hatalı Şifre!");
+            }
+        }
+
         socket.on('bekleme_mesaji_guncelle', (msg) => {
             document.getElementById('waiting-text').innerText = msg;
             document.getElementById('waiting-display').style.display = 'block';
             document.getElementById('poll-display').style.display = 'none';
         });
 
-        // ANKET YAYINI: Herkeste anket ekranını açar
         socket.on('anket_guncelle', (poll) => {
             document.getElementById('waiting-display').style.display = 'none';
             document.getElementById('poll-display').style.display = 'block';
@@ -105,20 +124,23 @@
             });
         });
 
-        // --- ADMIN FONKSİYONLARI ---
         function toggleAdmin() {
-            const modal = document.getElementById('admin-modal');
-            modal.style.display = modal.style.display === 'block' ? 'none' : 'block';
+            document.getElementById('admin-modal').style.display = 'block';
+        }
+
+        function closeAdmin() {
+            document.getElementById('admin-modal').style.display = 'none';
         }
 
         function updateWaitingMsg() {
             const msg = document.getElementById('new-waiting-msg').value;
-            socket.emit('bekleme_mesaji_degistir', msg);
+            if(msg.trim() !== "") {
+                socket.emit('bekleme_mesaji_degistir', msg);
+                closeAdmin();
+            }
         }
 
         function renderAnketSecimi() {
-            // Admin burada db içindeki şarkılardan seçim yapıp 'anket_yayinla' emit eder
-            // Bu kısım Repertuar Düzenle menüsüne entegre edilebilir.
             alert("Şarkı seçimi menüsü açılıyor...");
         }
     </script>
