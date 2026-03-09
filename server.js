@@ -7,82 +7,97 @@ const fs = require('fs-extra');
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
-const DB_PATH = path.join(__dirname, 'data', 'db.json');
 
-fs.ensureDirSync(path.dirname(DB_PATH));
+// Disk mount path (Render’da verdiğin path)
+const DATA_PATH = path.join('/var/istek', 'db.json');
 
+// Eğer dosya yoksa oluştur
+fs.ensureFileSync(DATA_PATH);
+if (fs.readFileSync(DATA_PATH, 'utf8').trim() === '') {
+  fs.writeFileSync(DATA_PATH, JSON.stringify({ categories: [], songs: [] }, null, 2));
+}
+
+// Okuma/Yazma fonksiyonları
+function readDB() {
+  return fs.readJsonSync(DATA_PATH);
+}
+function writeDB(data) {
+  fs.writeJsonSync(DATA_PATH, data, { spaces: 2 });
+}
+
+// Statik dosyalar (index.html vs.)
 app.use(express.static(path.join(__dirname, 'public')));
 
-let currentSceneActive = false;
-let activePoll = null;
-let votedIps = new Set();
-let currentMessage = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+let sceneActive = false;
+let currentPoll = null;
+let waitingMessage = "Bekleme mesajı";
 
-async function loadDB() {
-    try { return await fs.readJson(DB_PATH); }
-    catch (e) { return { categories: [], songs: [] }; }
-}
-async function saveDB(data) {
-    try { await fs.writeJson(DB_PATH, data, { spaces: 2 }); }
-    catch (e) { console.error("DB kaydedilemedi:", e); }
-}
+// --- SOCKET.IO ---
+io.on('connection', (socket) => {
+  console.log("Yeni bağlantı:", socket.id);
 
-io.on('connection', async (socket) => {
-    const db = await loadDB();
-    socket.emit('init_data', db);
-    socket.emit('sahne_durumu_guncelle', currentSceneActive);
-    socket.emit('bekleme_mesaji_guncelle', currentMessage);
-    if (activePoll) socket.emit('yeni_anket_geldi', activePoll);
+  // İlk veri gönder
+  socket.emit('init_data', readDB());
+  socket.emit('sahne_durumu_guncelle', sceneActive);
+  socket.emit('bekleme_mesaji_guncelle', waitingMessage);
 
-    // --- REPERTUAR ---
-    socket.on('update_repertuar', async (data) => {
-        await saveDB(data);
-        io.emit('init_data', data);
-    });
+  // Bekleme mesajı güncelle
+  socket.on('bekleme_mesaji_degistir', (msg) => {
+    waitingMessage = msg;
+    io.emit('bekleme_mesaji_guncelle', msg);
+  });
 
-    // --- SAHNE DURUMU ---
-    socket.on('sahne_durumu_degistir', (isActive) => {
-        currentSceneActive = isActive;
-        io.emit('sahne_durumu_guncelle', isActive);
-    });
+  // Sahne durumu
+  socket.on('sahne_durumu_degistir', (isActive) => {
+    sceneActive = isActive;
+    io.emit('sahne_durumu_guncelle', sceneActive);
+  });
 
-    // --- BEKLEME MESAJI ---
-    socket.on('bekleme_mesaji_degistir', (msg) => {
-        currentMessage = msg;
-        io.emit('bekleme_mesaji_guncelle', msg);
-    });
+  // Repertuar güncelle
+  socket.on('update_repertuar', (data) => {
+    const db = readDB();
+    db.categories = data.categories;
+    db.songs = data.songs;
+    writeDB(db);
+    io.emit('init_data', db);
+  });
 
-    // --- ANKET ---
-    socket.on('anket_yayinla', (pollData) => {
-        votedIps.clear();
-        activePoll = { ...pollData, votes: {} };
-        pollData.options.forEach(opt => activePoll.votes[opt.id] = 0);
-        io.emit('yeni_anket_geldi', activePoll);
-    });
+  // Yeni anket
+  socket.on('anket_baslat', (poll) => {
+    currentPoll = { ...poll, votes: {} };
+    io.emit('yeni_anket_geldi', currentPoll);
+  });
 
-    socket.on('oy_ver', (optionId) => {
-        const forwarded = socket.handshake.headers['x-forwarded-for'];
-        const clientIp = forwarded ? forwarded.split(',')[0] : socket.handshake.address;
+  // Oy verme
+  socket.on('oy_ver', (optionId) => {
+    if (!currentPoll) {
+      socket.emit('oy_reddedildi', "Aktif anket yok.");
+      return;
+    }
+    if (!currentPoll.votes[optionId]) currentPoll.votes[optionId] = 0;
+    currentPoll.votes[optionId]++;
+    socket.emit('oy_onaylandi');
+    io.emit('oy_guncellendi', currentPoll);
+  });
 
-        if (activePoll && !votedIps.has(clientIp)) {
-            if (activePoll.votes[optionId] !== undefined) {
-                activePoll.votes[optionId]++;
-                votedIps.add(clientIp);
-                io.emit('oy_guncellendi', activePoll);
-                socket.emit('oy_onaylandi');
-            } else {
-                socket.emit('oy_reddedildi', 'Geçersiz seçenek!');
-            }
-        } else {
-            socket.emit('oy_reddedildi', 'Zaten oy verdiniz!');
-        }
-    });
-
-    socket.on('anketi_bitir_sinyali', (winner) => {
-        activePoll = null;
-        votedIps.clear();
-        io.emit('anket_temizle', winner);
-    });
+  // Anket bitir
+  socket.on('anketi_bitir_sinyali', () => {
+    if (!currentPoll) return;
+    let winner = null;
+    let maxVotes = -1;
+    for (const [optId, count] of Object.entries(currentPoll.votes)) {
+      if (count > maxVotes) {
+        maxVotes = count;
+        winner = currentPoll.options.find(o => o.id === optId)?.name;
+      }
+    }
+    io.emit('anket_temizle', winner);
+    currentPoll = null;
+  });
 });
 
-server.listen(process.env.PORT || 3000, () => console.log("Sistem hazır."));
+// Sunucu başlat
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor`);
+});
