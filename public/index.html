@@ -20,6 +20,9 @@
     #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
     #live-indicator { position: fixed; top: 15px; right: 60px; font-size: 1.2rem; font-weight: bold; color: red; display:none; animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity:0; } }
+    #message-panel { display:none; margin-top:10px; background:#1e293b; padding:15px; border-radius:10px; }
+    #msg-input { width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; }
+    .toggle-btn { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:300px; }
   </style>
 </head>
 <body>
@@ -34,12 +37,26 @@
     <button id="btn-start" class="menu-btn" style="background:#22c55e" onclick="startScene()"><i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT</button>
     <button id="btn-stop" class="menu-btn" style="background:#ef4444; display:none;" onclick="stopScene()"><i class="fas fa-stop"></i> SAHNEYİ BİTİR</button>
     <button id="btn-results" class="menu-btn" style="background:#38bdf8; display:none;"><i class="fas fa-chart-bar"></i> SONUÇLAR</button>
-    <button class="menu-btn" onclick="toggleMessagePanel()"><i class="fas fa-edit"></i> BEKLEME METNİ</button>
+
+    <!-- Bekleme Metni toggle -->
+    <div class="toggle-btn menu-btn" onclick="toggleMessagePanel()">
+      <span><i class="fas fa-edit"></i> BEKLEME METNİ</span>
+      <i class="fas fa-chevron-down"></i>
+    </div>
     <div id="message-panel">
       <input type="text" id="msg-input" placeholder="Bekleme mesajı yaz">
       <button class="menu-btn" style="background:#38bdf8" onclick="publishMessage()"><i class="fas fa-paper-plane"></i> YAYINLA</button>
     </div>
-    <button id="btn-repertuar" class="menu-btn" onclick="renderRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
+
+    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
+  </div>
+
+  <!-- Repertuar ekranı -->
+  <div id="layer-repertuar" class="layer">
+    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i><h2>REPERTUAR</h2></div>
+    <button class="menu-btn"><i class="fas fa-cogs"></i> MEKAN AYARLARI</button>
+    <button class="menu-btn"><i class="fas fa-folder"></i> KATEGORİLER</button>
+    <button class="menu-btn"><i class="fas fa-music"></i> ŞARKILAR</button>
   </div>
 
 <script>
@@ -55,10 +72,7 @@ function openAdmin() {
     alert("Yanlış şifre!");
   }
 }
-
-function closeAdmin() {
-  document.getElementById('layer-admin').style.display = 'none';
-}
+function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
 
 function startScene() {
   const pass = prompt("Sahne başlat şifresi:");
@@ -97,8 +111,11 @@ function publishMessage() {
   }
 }
 
-function renderRepertuar() {
-  alert("Repertuar menüsü: Mekan Ayarları, Kategoriler, Şarkılar");
+function openRepertuar() {
+  document.getElementById('layer-repertuar').style.display = 'block';
+}
+function closeLayer(id) {
+  document.getElementById(id).style.display = 'none';
 }
 </script>
 </body>
