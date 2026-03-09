@@ -31,7 +31,7 @@
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
         .drawer-overlay.active { display: block; }
 
-        .admin-main-btn { background: var(--input-bg); border: 1px solid #374151; color: white; padding: 15px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; text-decoration: none; font-size: 1rem; width: 100%; box-sizing: border-box; margin-bottom: 12px; }
+        .admin-main-btn { background: var(--input-bg); border: 1px solid #374151; color: white; padding: 15px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; text-decoration: none; font-size: 1rem; width: 100%; margin-bottom: 10px; }
         .action-btn { padding: 12px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; }
         .admin-input { background: #0f172a; border: 1px solid #374151; color: white; padding: 14px; border-radius: 8px; width: 100%; box-sizing: border-box; outline: none; margin-bottom: 10px; }
         
@@ -41,7 +41,7 @@
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
         .cat-combo { background: #0f172a; color: white; border: 1px solid #374151; padding: 6px; border-radius: 4px; }
-        #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: pointer; font-size: 1.8rem; }
+        #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.8rem; }
     </style>
 </head>
 <body>
@@ -62,19 +62,16 @@
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center;">Istek Portal - Yönetim</h3>
             
-            <div id="scene-mgmt-area">
-                <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
-                
-                <div id="active-scene-controls" style="display:none; flex-direction:column;">
-                    <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger);">Sahne Bitir <i class="fas fa-stop"></i></button>
-                    <button class="admin-main-btn" onclick="alert('Anket modülü aktif ediliyor...')">Oylama Oluştur <i class="fas fa-poll-h"></i></button>
-                    <button class="admin-main-btn" onclick="alert('Sonuç ekranı yükleniyor...')">Sonuç İzle <i class="fas fa-chart-line"></i></button>
-                </div>
-            </div>
-
-            <div id="standard-menu">
+            <div id="closed-scene-menu">
+                <button class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
                 <button class="admin-main-btn" onclick="openPage('p-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
                 <button class="admin-main-btn" onclick="openPage('p-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
+            </div>
+
+            <div id="active-scene-menu" style="display:none;">
+                <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger);">Sahne Bitir <i class="fas fa-stop"></i></button>
+                <button class="admin-main-btn" onclick="alert('Anket modülü')">Oylama Oluştur <i class="fas fa-poll-h"></i></button>
+                <button class="admin-main-btn" onclick="alert('Sonuç izle')">Sonuç İzle <i class="fas fa-chart-line"></i></button>
             </div>
 
             <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
@@ -121,14 +118,11 @@
         let isSceneLive = false;
 
         socket.on('init_data', d => { 
-            db = d; 
-            renderAll(); 
-            if(d.isSceneLive !== undefined) updateSceneStatus(d.isSceneLive);
+            db = d; renderAll(); 
+            if(d.isSceneLive !== undefined) updateUI(d.isSceneLive);
         });
         
-        socket.on('sahne_durumu_guncelle', status => {
-            updateSceneStatus(status);
-        });
+        socket.on('sahne_durumu_guncelle', status => { updateUI(status); });
 
         socket.on('bekleme_mesaji_guncelle', d => {
             const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
@@ -143,32 +137,18 @@
             }, 500);
         });
 
-        function updateSceneStatus(status) {
+        function updateUI(status) {
             isSceneLive = status;
-            const startBtn = document.getElementById('btn-start-scene');
-            const activeCtrl = document.getElementById('active-scene-controls');
-            const stdMenu = document.getElementById('standard-menu');
-            const liveLabel = document.getElementById('live-status');
-
-            if(status) {
-                startBtn.style.display = 'none';
-                stdMenu.style.display = 'none';
-                activeCtrl.style.display = 'flex';
-                liveLabel.style.display = 'block';
-            } else {
-                startBtn.style.display = 'flex';
-                stdMenu.style.display = 'block';
-                activeCtrl.style.display = 'none';
-                liveLabel.style.display = 'none';
-            }
+            document.getElementById('closed-scene-menu').style.display = status ? 'none' : 'block';
+            document.getElementById('active-scene-menu').style.display = status ? 'block' : 'none';
+            document.getElementById('live-status').style.display = status ? 'block' : 'none';
         }
 
         function askStartScene() {
             openDrawer(`
                 <h3 style="color:var(--success)">Sahne Başlatılsın mı?</h3>
-                <p>Ekran mesajı otomatik güncellenecektir.</p>
+                <p>Ekrana keyifli seyirler mesajı gönderilecektir.</p>
                 <button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">EVET, BAŞLAT</button>
-                <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="closeDrawer()">İPTAL</button>
             `);
         }
 
@@ -185,7 +165,7 @@
         function askEndScene() {
             openDrawer(`
                 <h4 style="color:var(--danger)">Sahneyi Bitir</h4>
-                <input type="password" id="end-pw" class="admin-input" placeholder="Şifre (1167)">
+                <input type="password" id="end-pw" class="admin-input" placeholder="Şifre">
                 <button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">SAHNEYİ KAPAT</button>
             `);
             setTimeout(() => document.getElementById('end-pw').focus(), 100);
@@ -196,7 +176,7 @@
                 socket.emit('sahne_durumu_degistir', false);
                 if(lastManualMsg) socket.emit('bekleme_mesaji_degistir', lastManualMsg);
                 closeDrawer();
-            } else { alert("Hatalı Şifre!"); }
+            } else alert("Şifre Hatalı!");
         }
 
         function updatePanelInputs() {
@@ -225,7 +205,7 @@
             };
             socket.emit('bekleme_mesaji_degistir', data);
             if(!isSceneLive) lastManualMsg = data;
-            openDrawer(`<h3 style="color:var(--success); text-align:center;">Yayınlandı!</h3><button class="action-btn" style="background:var(--primary)" onclick="closeDrawer()">TAMAM</button>`);
+            openDrawer(`<h4 style="color:var(--success)">Yayınlandı</h4>`);
         }
 
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
@@ -233,7 +213,6 @@
         function showAuthDrawer() { openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); document.getElementById('admin-pw').focus(); }
         function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; updatePanelInputs(); } else alert("Hatalı!"); }
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
-
         function renderAll() {
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
@@ -245,7 +224,6 @@
             }).join('');
         }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-        // ... (Diğer repertuar yardımcı fonksiyonları aynı kalır)
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
         function saveCat() { const name = document.getElementById('nc-name').value; if(!name) return; db.categories.push({id: Date.now(), name}); socket.emit('db_update', db); closeDrawer(); }
         function askDelCat(id, name) { openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="confirmDelCat(${id})">SİL</button>`); }
