@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Anket Sahne</title>
+  <title>Modern Anket Uygulaması</title>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -13,7 +13,7 @@
       font-family:'Segoe UI',sans-serif;
       margin:0;
     }
-    #status { font-size:1.4rem; text-align:center; margin-top:50px; color:#38bdf8; display:none; }
+    #status { font-size:1.4rem; text-align:center; margin-top:20px; color:#38bdf8; display:none; }
     .menu-btn {
       width:80%;
       max-width:600px;
@@ -47,21 +47,10 @@
       align-items:center;
       justify-content:center;
     }
-    #settings-icon {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      font-size: 1.8rem;
-      color: #38bdf8;
-      cursor: pointer;
-      opacity: 0.1;
-      transition: transform 0.2s ease;
-    }
-    #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
     #live-indicator {
       position: fixed;
       top: 15px;
-      right: 60px;
+      right: 15px;
       font-size: 1.4rem;
       font-weight: bold;
       color: red;
@@ -102,17 +91,17 @@
   <div id="status"></div>
   <div id="options"></div>
 
-  <i id="settings-icon" class="fas fa-cog" onclick="openAdmin()"></i>
   <div id="live-indicator">LIVE</div>
 
-  <!-- Admin Panel -->
-  <div id="layer-admin" class="layer">
-    <div><i class="fas fa-arrow-left" onclick="closeAdmin()"></i><h2>ADMİN PANELİ</h2></div>
-    <button id="btn-start" class="menu-btn" style="background:#22c55e" onclick="startScene()"><i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT</button>
-    <button id="btn-stop" class="menu-btn" style="background:#ef4444; display:none;" onclick="stopScene()"><i class="fas fa-stop"></i> SAHNEYİ BİTİR</button>
-    <button id="btn-results" class="menu-btn" style="background:#38bdf8; display:none;"><i class="fas fa-chart-bar"></i> SONUÇLAR</button>
+  <!-- Başlangıçta sadece Repertuar butonu -->
+  <div id="layer-main" class="layer" style="display:flex;">
+    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
+  </div>
 
-    <!-- Bekleme Metni toggle -->
+  <!-- Repertuar ekranı -->
+  <div id="layer-repertuar" class="layer">
+    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i><h2>REPERTUAR</h2></div>
+    <button class="menu-btn" onclick="startScene()"><i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT</button>
     <div class="toggle-btn menu-btn" onclick="toggleMessagePanel()">
       <span><i class="fas fa-edit"></i> BEKLEME METNİ</span>
       <i class="fas fa-chevron-down"></i>
@@ -121,5 +110,57 @@
       <input type="text" id="msg-input" placeholder="Bekleme mesajı yaz">
       <button class="menu-btn" style="background:#38bdf8" onclick="publishMessage()"><i class="fas fa-paper-plane"></i> YAYINLA</button>
     </div>
+    <button class="menu-btn"><i class="fas fa-cogs"></i> MEKAN AYARLARI</button>
+    <button class="menu-btn"><i class="fas fa-folder"></i> KATEGORİLER</button>
+    <button class="menu-btn"><i class="fas fa-music"></i> ŞARKILAR</button>
+    <button class="menu-btn" style="background:#ef4444" onclick="stopScene()"><i class="fas fa-stop"></i> SAHNEYİ BİTİR</button>
+  </div>
 
-    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button
+<script>
+const socket = io();
+
+function startScene() {
+  const pass = prompt("Sahne başlat şifresi:");
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
+  socket.emit('sahne_durumu_degistir', true);
+}
+
+function stopScene() {
+  const pass = prompt("Sahne bitir şifresi:");
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
+  socket.emit('sahne_durumu_degistir', false);
+}
+
+function toggleMessagePanel() {
+  const panel = document.getElementById('message-panel');
+  panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
+}
+
+function publishMessage() {
+  const msg = document.getElementById('msg-input').value;
+  socket.emit('bekleme_mesaji_degistir', msg);
+  document.getElementById('message-panel').style.display = 'none';
+}
+
+function openRepertuar() {
+  document.getElementById('layer-repertuar').style.display = 'flex';
+}
+function closeLayer(id) {
+  document.getElementById(id).style.display = 'none';
+}
+
+// Gelen verileri tüm cihazlarda göster
+socket.on('sahne_durumu_guncelle', (isActive) => {
+  if(isActive) {
+    document.getElementById('live-indicator').style.display = 'block';
+  } else {
+    document.getElementById('live-indicator').style.display = 'none';
+  }
+});
+socket.on('bekleme_mesaji_guncelle', (msg) => {
+  document.getElementById('status').innerText = msg;
+  document.getElementById('status').style.display = 'block';
+});
+</script>
+</body>
+</html>
