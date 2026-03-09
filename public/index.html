@@ -30,9 +30,9 @@
       align-items:center;
       gap:12px;
       justify-content:center;
-      transition: background 0.3s;
+      transition: background 0.3s, transform 0.2s;
     }
-    .menu-btn:hover { background:#334155; }
+    .menu-btn:hover { background:#334155; transform:scale(1.03); }
     .layer {
       display:none;
       position:fixed;
@@ -45,7 +45,7 @@
       display:flex;
       flex-direction:column;
       align-items:center;
-      justify-content:center; /* ortalama */
+      justify-content:center;
     }
     #settings-icon {
       position: fixed;
@@ -122,75 +122,4 @@
       <button class="menu-btn" style="background:#38bdf8" onclick="publishMessage()"><i class="fas fa-paper-plane"></i> YAYINLA</button>
     </div>
 
-    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
-  </div>
-
-  <!-- Repertuar ekranı -->
-  <div id="layer-repertuar" class="layer">
-    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i><h2>REPERTUAR</h2></div>
-    <button class="menu-btn"><i class="fas fa-cogs"></i> MEKAN AYARLARI</button>
-    <button class="menu-btn"><i class="fas fa-folder"></i> KATEGORİLER</button>
-    <button class="menu-btn"><i class="fas fa-music"></i> ŞARKILAR</button>
-  </div>
-
-<script>
-const socket = io();
-let isAdmin = false;
-
-function openAdmin() {
-  const pass = prompt("Admin şifresi:");
-  if(pass === "1167") {
-    isAdmin = true;
-    document.getElementById('layer-admin').style.display = 'flex';
-  } else {
-    alert("Yanlış şifre!");
-  }
-}
-function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
-
-function startScene() {
-  const pass = prompt("Sahne başlat şifresi:");
-  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
-  socket.emit('sahne_durumu_degistir', true);
-  document.getElementById('status').innerText = "Bir sonraki oylamaya kadar müziğin keyfini çıkar";
-  document.getElementById('status').style.display = 'block';
-  document.getElementById('btn-repertuar').style.display = 'none';
-  document.getElementById('btn-results').style.display = 'block';
-  document.getElementById('btn-stop').style.display = 'block';
-  document.getElementById('live-indicator').style.display = 'block';
-}
-
-function stopScene() {
-  const pass = prompt("Sahne bitir şifresi:");
-  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
-  socket.emit('sahne_durumu_degistir', false);
-  socket.emit('anketi_bitir_sinyali', null);
-  document.getElementById('status').style.display = 'none';
-  document.getElementById('btn-repertuar').style.display = 'block';
-  document.getElementById('btn-results').style.display = 'none';
-  document.getElementById('btn-stop').style.display = 'none';
-  document.getElementById('live-indicator').style.display = 'none';
-}
-
-function toggleMessagePanel() {
-  const panel = document.getElementById('message-panel');
-  panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
-}
-
-function publishMessage() {
-  if(isAdmin) {
-    const msg = document.getElementById('msg-input').value;
-    socket.emit('bekleme_mesaji_degistir', msg);
-    document.getElementById('message-panel').style.display = 'none';
-  }
-}
-
-function openRepertuar() {
-  document.getElementById('layer-repertuar').style.display = 'flex';
-}
-function closeLayer(id) {
-  document.getElementById(id).style.display = 'none';
-}
-</script>
-</body>
-</html>
+    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button
