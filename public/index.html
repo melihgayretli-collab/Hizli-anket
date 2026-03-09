@@ -3,72 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Hızlı Anket - Canlı Sahne</title>
+  <title>Anket Sahne</title>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root { --bg:#0f172a; --card:#1e293b; --primary:#38bdf8; --success:#22c55e; --danger:#ef4444; --text:#f8fafc; }
     body {
-      background: var(--bg) url('image1.png') no-repeat center center fixed;
+      background: url('image1.png') no-repeat center center fixed;
       background-size: cover;
-      color: var(--text);
+      color: #f8fafc;
       font-family:'Segoe UI',sans-serif;
       margin:0;
     }
     .container { min-height:100vh; display:flex; flex-direction:column; align-items:center; padding:20px; }
-    #status { font-size:1.2rem; text-align:center; margin-top:50px; color:var(--primary); display:none; }
-    .menu-btn { width:100%; max-width:300px; padding:15px; margin:10px 0; border:none; border-radius:12px; background:var(--card); color:white; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:10px; justify-content:center; }
-    .layer {
-      display:none;
-      position:fixed;
-      top:0; left:0;
-      width:100%; height:100%;
-      background:rgba(15,23,42,0.85);
-      backdrop-filter: blur(8px);
-      padding:20px;
-      z-index:100;
-      overflow-y:auto;
-      border-radius:12px;
-    }
-    #message-panel {
-      display:none;
-      margin-top:10px;
-      background:var(--card);
-      padding:15px;
-      border-radius:10px;
-    }
-    #msg-input {
-      width:100%;
-      padding:10px;
-      margin-bottom:10px;
-      border-radius:8px;
-      border:1px solid #334155;
-      background:#0f172a;
-      color:white;
-    }
-    /* Çark simgesi */
-    #settings-icon {
-      position: fixed;
-      top: 15px;
-      right: 15px;
-      font-size: 1.8rem;
-      color: var(--primary);
-      cursor: pointer;
-      opacity: 0.1; /* neredeyse görünmez */
-      transition: transform 0.2s ease;
-    }
+    #status { font-size:1.2rem; text-align:center; margin-top:50px; color:#38bdf8; display:none; }
+    .menu-btn { width:100%; max-width:300px; padding:15px; margin:10px 0; border:none; border-radius:12px; background:#1e293b; color:white; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:10px; justify-content:center; }
+    .layer { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter: blur(8px); padding:20px; z-index:100; overflow-y:auto; border-radius:12px; }
+    #message-panel { display:none; margin-top:10px; background:#1e293b; padding:15px; border-radius:10px; }
+    #msg-input { width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; }
+    #settings-icon { position: fixed; top: 15px; right: 15px; font-size: 1.8rem; color: #38bdf8; cursor: pointer; opacity: 0.1; transition: transform 0.2s ease; }
     #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
-    /* LIVE yazısı */
-    #live-indicator {
-      position: fixed;
-      top: 15px;
-      right: 60px;
-      font-size: 1.2rem;
-      font-weight: bold;
-      color: red;
-      display:none;
-      animation: blink 1s infinite;
-    }
+    #live-indicator { position: fixed; top: 15px; right: 60px; font-size: 1.2rem; font-weight: bold; color: red; display:none; animation: blink 1s infinite; }
     @keyframes blink { 50% { opacity:0; } }
   </style>
 </head>
@@ -78,37 +32,20 @@
     <div id="options" style="width:100%; max-width:400px; margin-top:30px;"></div>
   </div>
 
-  <!-- Sağ üstte çark simgesi -->
   <i id="settings-icon" class="fas fa-cog" onclick="openAdmin()"></i>
   <div id="live-indicator">LIVE</div>
 
   <div id="layer-admin" class="layer">
     <div><i class="fas fa-arrow-left" onclick="closeAdmin()"></i><h2>ADMİN PANELİ</h2></div>
-    <button id="btn-start" class="menu-btn" style="background:var(--success)" onclick="startScene()">
-      <i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT
-    </button>
-    <button id="btn-stop" class="menu-btn" style="background:var(--danger); display:none;" onclick="stopScene()">
-      <i class="fas fa-stop"></i> SAHNEYİ BİTİR
-    </button>
-    <button id="btn-results" class="menu-btn" style="background:var(--primary); display:none;" onclick="showResults()">
-      <i class="fas fa-chart-bar"></i> SONUÇLAR
-    </button>
-    
-    <!-- Bekleme Metni -->
-    <button class="menu-btn" onclick="toggleMessagePanel()">
-      <i class="fas fa-edit"></i> BEKLEME METNİ
-    </button>
+    <button id="btn-start" class="menu-btn" style="background:#22c55e" onclick="startScene()"><i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT</button>
+    <button id="btn-stop" class="menu-btn" style="background:#ef4444; display:none;" onclick="stopScene()"><i class="fas fa-stop"></i> SAHNEYİ BİTİR</button>
+    <button id="btn-results" class="menu-btn" style="background:#38bdf8; display:none;" onclick="showResults()"><i class="fas fa-chart-bar"></i> SONUÇLAR</button>
+    <button class="menu-btn" onclick="toggleMessagePanel()"><i class="fas fa-edit"></i> BEKLEME METNİ</button>
     <div id="message-panel">
       <input type="text" id="msg-input" placeholder="Bekleme mesajı yaz">
-      <button class="menu-btn" style="background:var(--primary)" onclick="publishMessage()">
-        <i class="fas fa-paper-plane"></i> YAYINLA
-      </button>
+      <button class="menu-btn" style="background:#38bdf8" onclick="publishMessage()"><i class="fas fa-paper-plane"></i> YAYINLA</button>
     </div>
-
-    <!-- Repertuar -->
-    <button id="btn-repertuar" class="menu-btn" onclick="renderRepertuar()">
-      <i class="fas fa-music"></i> REPERTUAR
-    </button>
+    <button id="btn-repertuar" class="menu-btn" onclick="renderRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
   </div>
 
   <div id="layer-repertuar" class="layer">
@@ -120,47 +57,7 @@
 
 <script>
 const socket = io();
-let categories = [];
-let allSongs = [];
-let sceneActive = false;
 let isAdmin = false;
 
-// --- Admin panel açma/kapama ---
 function openAdmin() {
   const pass = prompt("Admin şifresi:");
-  if(pass === "1167") {
-    isAdmin = true;
-    document.getElementById('layer-admin').style.display = 'block';
-  } else {
-    alert("Yanlış şifre!");
-  }
-}
-function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
-function closeLayer(id) { document.getElementById(id).style.display = 'none'; }
-
-// --- Mesaj Paneli ---
-function toggleMessagePanel() {
-  const panel = document.getElementById('message-panel');
-  panel.style.display = (panel.style.display === 'none' || panel.style.display === '') ? 'block' : 'none';
-}
-document.addEventListener('click', (e) => {
-  const panel = document.getElementById('message-panel');
-  const btn = document.querySelector('button[onclick="toggleMessagePanel()"]');
-  if (panel.style.display === 'block' && !panel.contains(e.target) && e.target !== btn) {
-    panel.style.display = 'none';
-  }
-});
-function publishMessage() {
-  if(isAdmin) {
-    const msg = document.getElementById('msg-input').value;
-    socket.emit('bekleme_mesaji_degistir', msg);
-    document.getElementById('message-panel').style.display = 'none';
-  }
-}
-
-// --- Sahne Başlat / Bitir ---
-function startScene() {
-  const pass = prompt("Sahne başlat şifresi:");
-  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
-  if(isAdmin) {
-    socket.emit('sahne_durumu_degistir', true);
