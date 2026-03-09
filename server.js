@@ -19,26 +19,53 @@ function writeDB(data) { fs.writeJsonSync(DATA_PATH, data, { spaces: 2 }); }
 
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Merkezi Durum Yönetimi
 let sceneActive = false;
-let waitingMessage = "Bekleme mesajı";
+let waitingMessage = "Konserimiz birazdan başlayacak...";
+let activePoll = null;
 
 io.on('connection', (socket) => {
+  // Yeni bağlanan kullanıcıya güncel durumu gönder
   socket.emit('init_data', readDB());
   socket.emit('sahne_durumu_guncelle', sceneActive);
   socket.emit('bekleme_mesaji_guncelle', waitingMessage);
+  if (activePoll) socket.emit('anket_guncelle', activePoll);
 
+  // ADMIN: Bekleme metnini tüm ekranlarda değiştirir
   socket.on('bekleme_mesaji_degistir', (msg) => {
     waitingMessage = msg;
     io.emit('bekleme_mesaji_guncelle', msg);
   });
 
+  // ADMIN: Sahne durumunu (Canlı/Beklemede) değiştirir
   socket.on('sahne_durumu_degistir', (isActive) => {
     sceneActive = isActive;
-    if(isActive) waitingMessage = "Bir sonraki oylamaya kadar müziğin keyfini çıkar";
-    io.emit('sahne_durumu_guncelle', sceneActive);
-    io.emit('bekleme_mesaji_guncelle', waitingMessage);
+    if (!isActive) activePoll = null; // Sahne kapanınca anketi temizle
+    io.emit('sahne_durumu_guncelle', isActive);
+  });
+
+  // ADMIN: Anketi tüm ekranlara basar
+  socket.on('anket_yayinla', (pollData) => {
+    activePoll = pollData;
+    io.emit('anket_guncelle', activePoll);
+  });
+
+  // KULLANICI: Oy verme işlemi
+  socket.on('oy_ver', (songId) => {
+    if (activePoll && activePoll.votes.hasOwnProperty(songId)) {
+      activePoll.votes[songId]++;
+      io.emit('anket_guncelle', activePoll); // Herkese anlık sonuçları yansıt
+    }
+  });
+
+  // ADMIN: Anketi sonlandır ve kazananı ilan et
+  socket.on('anket_bitir', (winner) => {
+    activePoll = null;
+    io.emit('anket_sonucu_ilan_et', winner);
   });
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Sunucu ${PORT} portunda çalışıyor`));
+server.listen(PORT, () => {
+  console.log(`Sunucu ${PORT} portunda çalışıyor.`);
+});
