@@ -16,6 +16,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 let currentSceneActive = false;
 let activePoll = null;
 let votedIps = new Set();
+let currentMessage = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
 
 async function loadDB() {
     try { return await fs.readJson(DB_PATH); }
@@ -30,18 +31,28 @@ io.on('connection', async (socket) => {
     const db = await loadDB();
     socket.emit('init_data', db);
     socket.emit('sahne_durumu_guncelle', currentSceneActive);
+    socket.emit('bekleme_mesaji_guncelle', currentMessage);
     if (activePoll) socket.emit('yeni_anket_geldi', activePoll);
 
+    // --- REPERTUAR ---
     socket.on('update_repertuar', async (data) => {
         await saveDB(data);
         io.emit('init_data', data);
     });
 
+    // --- SAHNE DURUMU ---
     socket.on('sahne_durumu_degistir', (isActive) => {
         currentSceneActive = isActive;
         io.emit('sahne_durumu_guncelle', isActive);
     });
 
+    // --- BEKLEME MESAJI ---
+    socket.on('bekleme_mesaji_degistir', (msg) => {
+        currentMessage = msg;
+        io.emit('bekleme_mesaji_guncelle', msg);
+    });
+
+    // --- ANKET ---
     socket.on('anket_yayinla', (pollData) => {
         votedIps.clear();
         activePoll = { ...pollData, votes: {} };
