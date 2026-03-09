@@ -22,7 +22,7 @@
         .content { position: relative; z-index: 10; padding: 20px; text-align: center; }
         
         /* Yayın Ekranları */
-        #waiting-display { font-size: 2rem; margin-top: 20%; font-weight: bold; }
+        #waiting-display { font-size: 2.5rem; margin-top: 20%; font-weight: bold; }
         #poll-display { display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-top: 10%; }
         
         .vote-btn { 
@@ -30,24 +30,24 @@
             background: var(--primary); border: none; color: white; border-radius: 8px; font-size: 1.2rem;
         }
 
-        /* YENİ: Sağ Üst Şeffaf Admin Butonu */
+        /* Sağ Üst Saydam Admin Butonu */
         #admin-panel { 
             position: fixed; top: 15px; right: 15px; z-index: 100;
         }
         .admin-btn { 
-            background: transparent; border: none; color: rgba(255, 255, 255, 0.15); /* Neredeyse saydam */
-            font-size: 1.5rem; cursor: pointer; transition: color 0.3s; 
+            background: transparent; border: none; color: rgba(255, 255, 255, 0.1); 
+            font-size: 1.8rem; cursor: pointer; transition: color 0.3s; 
         }
-        .admin-btn:hover { color: rgba(255, 255, 255, 0.5); }
+        .admin-btn:hover { color: rgba(255, 255, 255, 0.4); }
         
         .modal { 
             display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--dark); padding: 20px; border-radius: 10px; z-index: 101; width: 90%; max-width: 400px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            background: var(--dark); padding: 20px; border-radius: 10px; z-index: 200; width: 90%; max-width: 400px;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 1px solid #334155;
         }
 
-        input[type="text"], input[type="password"] {
-            width: 100%; padding: 10px; margin-top: 5px; border-radius: 5px; border: 1px solid #334155;
+        input[type="text"] {
+            width: 100%; padding: 12px; margin-top: 10px; border-radius: 5px; border: 1px solid #334155;
             background: #1e293b; color: white; box-sizing: border-box;
         }
     </style>
@@ -57,7 +57,7 @@
 
     <div class="content">
         <div id="waiting-display">
-            <h2 id="waiting-text">Bekleme mesajı yükleniyor...</h2>
+            <h2 id="waiting-text"></h2>
         </div>
 
         <div id="poll-display">
@@ -71,19 +71,19 @@
     </div>
 
     <div id="admin-modal" class="modal">
-        <h3>Yönetim Paneli</h3>
+        <h3 style="margin-top:0; color:var(--success)">Yönetim Paneli Active</h3>
         
         <div style="margin-bottom: 20px;">
-            <label>Bekleme Metni Gönder:</label>
-            <input type="text" id="new-waiting-msg">
-            <button onclick="updateWaitingMsg()" style="width:100%; margin-top:10px; background: var(--success); color:white; border:none; padding:10px; border-radius:5px;">Yayınla</button>
+            <label>Ekrana Metin Gönder:</label>
+            <input type="text" id="new-waiting-msg" placeholder="Mesajınızı yazın...">
+            <button onclick="updateWaitingMsg()" style="width:100%; margin-top:15px; background: var(--success); color:white; border:none; padding:12px; border-radius:5px; font-weight:bold; cursor:pointer;">YAYINLA</button>
         </div>
 
         <div id="repertuar-ozet">
-            <button onclick="renderAnketSecimi()" style="width:100%; background: var(--primary); color:white; border:none; padding:10px; border-radius:5px;">Anket Başlat</button>
+            <button onclick="renderAnketSecimi()" style="width:100%; background: var(--primary); color:white; border:none; padding:12px; border-radius:5px; font-weight:bold; cursor:pointer;">ANKET BAŞLAT</button>
         </div>
         
-        <button onclick="closeAdmin()" style="width:100%; margin-top:20px; background:transparent; color:#94a3b8; border:1px solid #334155; padding:8px; border-radius:5px;">Kapat</button>
+        <button onclick="closeAdmin()" style="width:100%; margin-top:20px; background:transparent; color:#94a3b8; border:1px solid #334155; padding:8px; border-radius:5px; cursor:pointer;">KAPAT</button>
     </div>
 
     <script>
@@ -93,22 +93,26 @@
 
         socket.on('init_data', data => { db = data; });
 
-        // Şifre Kontrolü
+        // Şifre Kontrolü ve Panel Açılışı
         function checkAdminPassword() {
             const pass = prompt("Yönetici Şifresi:");
             if (pass === ADMIN_PASS) {
-                toggleAdmin();
+                document.getElementById('admin-modal').style.display = 'block';
             } else if (pass !== null) {
                 alert("Hatalı Şifre!");
             }
         }
 
+        // MESAJ YAYINI
         socket.on('bekleme_mesaji_guncelle', (msg) => {
-            document.getElementById('waiting-text').innerText = msg;
-            document.getElementById('waiting-display').style.display = 'block';
-            document.getElementById('poll-display').style.display = 'none';
+            if (msg) {
+                document.getElementById('waiting-text').innerText = msg;
+                document.getElementById('waiting-display').style.display = 'block';
+                document.getElementById('poll-display').style.display = 'none';
+            }
         });
 
+        // ANKET YAYINI
         socket.on('anket_guncelle', (poll) => {
             document.getElementById('waiting-display').style.display = 'none';
             document.getElementById('poll-display').style.display = 'block';
@@ -124,10 +128,6 @@
             });
         });
 
-        function toggleAdmin() {
-            document.getElementById('admin-modal').style.display = 'block';
-        }
-
         function closeAdmin() {
             document.getElementById('admin-modal').style.display = 'none';
         }
@@ -136,12 +136,13 @@
             const msg = document.getElementById('new-waiting-msg').value;
             if(msg.trim() !== "") {
                 socket.emit('bekleme_mesaji_degistir', msg);
+                document.getElementById('new-waiting-msg').value = ""; // Inputu temizle
                 closeAdmin();
             }
         }
 
         function renderAnketSecimi() {
-            alert("Şarkı seçimi menüsü açılıyor...");
+            alert("Repertuar Düzenle menüsü aktif ediliyor...");
         }
     </script>
 </body>
