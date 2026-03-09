@@ -1,56 +1,179 @@
-<script>
-    const socket = io();
-    let categories = [];
-    let allSongs = [];
-    let sceneActive = false;
-    let currentPoll = null;
-    let hasVoted = false; // Frontend kontrolü
-
-    // SUNUCUDAN VERİLERİ AL
-    socket.on('init_data', (data) => {
-        categories = data.categories || [];
-        allSongs = data.songs || [];
-        // Menülerin render fonksiyonlarını burada tetikle (Örn: renderCategories)
-    });
-
-    socket.on('oy_onaylandi', () => {
-        hasVoted = true;
-        alert("Oyunuz başarıyla kaydedildi!");
-    });
-
-    socket.on('oy_reddedildi', (msg) => {
-        alert(msg);
-    });
-
-    // VERİYİ SUNUCUYA KAYDET (Her değişiklikten sonra çağır)
-    function saveData() {
-        const data = { categories, songs: allSongs };
-        socket.emit('update_repertuar', data);
-        // Localstorage yedeği (Opsiyonel)
-        localStorage.setItem('rep_cats', JSON.stringify(categories));
-        localStorage.setItem('rep_songs', JSON.stringify(allSongs));
-    }
-
-    // Sahne Yönetimi
-    function startScene() {
-        socket.emit('sahne_durumu_degistir', true);
-        closeAdmin();
-    }
-
-    function stopScene() {
-        if(confirm("Sahne bitirilsin mi?")) {
-            socket.emit('sahne_durumu_degistir', false);
-            socket.emit('anketi_bitir_sinyali', null);
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Hızlı Anket - Canlı Sahne</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #0f172a;
+            --card: #1e293b;
+            --primary: #38bdf8;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --text: #f8fafc;
         }
-    }
 
-    // Kategori Silme (Mevcut mantık korundu, saveData eklendi)
-    function deleteCat(catId) {
-        categories = categories.filter(c => c.id !== catId);
-        allSongs = allSongs.map(s => (s.catId === catId ? { ...s, catId: null } : s));
-        saveData(); // Sunucuya gönder
-        renderCategories();
-    }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: var(--bg); color: var(--text); overflow-x: hidden; }
 
-    // ... Diğer render ve menü fonksiyonların (Mevcut haliyle kalabilir) ...
-</script>
+        .container { min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #status { font-size: 1.2rem; text-align: center; margin-top: 50px; color: var(--primary); display: none; }
+        
+        .menu-btn { 
+            width: 100%; max-width: 300px; padding: 15px; margin: 10px 0; 
+            border: none; border-radius: 12px; background: var(--card); 
+            color: white; font-weight: bold; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+        }
+
+        .layer { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg); padding: 20px; z-index: 100; overflow-y: auto; }
+        .layer-header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+        
+        .cat-item { background: var(--card); padding: 15px; border-radius: 10px; margin-bottom: 10px; }
+        .item-header { display: flex; justify-content: space-between; align-items: center; }
+        .confirm-area { display: none; margin-top: 10px; border-top: 1px solid #334155; padding-top: 10px; }
+
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #334155; background: #0f172a; color: white; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1 style="margin-top: 20px; letter-spacing: 2px;">CANLI ANKET</h1>
+        <div id="status">Bir sonraki oylama gelene kadar müziğin keyfini çıkar</div>
+        <div id="options" style="width: 100%; max-width: 400px; margin-top: 30px;"></div>
+
+        <button class="menu-btn" onclick="openAdmin()" style="margin-top: auto; opacity: 0.5;">PANEL</button>
+    </div>
+
+    <div id="layer-admin" class="layer">
+        <div class="layer-header">
+            <i class="fas fa-arrow-left" onclick="closeAdmin()"></i>
+            <h2>ADMİN PANELİ</h2>
+        </div>
+        <button id="btn-start" class="menu-btn" style="background: var(--success)" onclick="startScene()">SAHNEYİ BAŞLAT</button>
+        <button id="btn-stop" class="menu-btn" style="background: var(--danger); display:none;" onclick="stopScene()">SAHNEYİ BİTİR</button>
+        <button class="menu-btn" onclick="alert('Bekleme Ekranı Düzenle')">BEKLEME EKRANI DÜZENLE</button>
+        <button id="btn-rep" class="menu-btn" onclick="renderCategories()">REPERTUAR DÜZENLE</button>
+    </div>
+
+    <div id="layer-cats" class="layer">
+        <div class="layer-header">
+            <i class="fas fa-arrow-left" onclick="closeLayer('layer-cats')"></i>
+            <h2>KATEGORİLER</h2>
+        </div>
+        <div id="cat-list"></div>
+    </div>
+
+    <script>
+        const socket = io();
+        let categories = [];
+        let allSongs = [];
+        let sceneActive = false;
+
+        // --- SUNUCU ETKİLEŞİMİ (DB & DURUM) ---
+
+        // Uygulama açıldığında sunucudaki JSON verilerini çek
+        socket.on('init_data', (data) => {
+            categories = data.categories || [];
+            allSongs = data.songs || [];
+            if(document.getElementById('layer-cats').style.display === 'block') renderCategories();
+        });
+
+        socket.on('sahne_durumu_guncelle', (isActive) => {
+            sceneActive = isActive;
+            document.getElementById('status').style.display = isActive ? 'block' : 'none';
+            updateAdminUI();
+        });
+
+        // --- ANKET VE OYLAMA MEKANİZMASI ---
+
+        // Yeni bir anket geldiğinde seçenekleri buton olarak ekrana basar
+        socket.on('yeni_anket_geldi', (poll) => {
+            const optionsCont = document.getElementById('options');
+            const statusEl = document.getElementById('status');
+            
+            statusEl.innerText = poll.title;
+            optionsCont.innerHTML = poll.options.map(opt => `
+                <button class="menu-btn" onclick="sendVote('${opt.id}')" style="background:var(--primary)">
+                    ${opt.name.toUpperCase()}
+                </button>
+            `).join('');
+        });
+
+        // Seçeneğe tıklandığında sunucuya (IP kontrollü) oy gönderir
+        function sendVote(optionId) {
+            socket.emit('oy_ver', optionId);
+            const buttons = document.querySelectorAll('#options .menu-btn');
+            buttons.forEach(btn => { btn.style.opacity = "0.5"; btn.disabled = true; });
+        }
+
+        socket.on('oy_onaylandi', () => alert("Oyunuz başarıyla kaydedildi!"));
+        socket.on('oy_reddedildi', (msg) => alert(msg));
+
+        socket.on('anket_temizle', (winner) => {
+            document.getElementById('options').innerHTML = '';
+            const statusEl = document.getElementById('status');
+            if(winner) {
+                statusEl.innerHTML = `<span style="color:var(--success)">KAZANAN</span><br><div style="font-size:2rem">${winner}</div>`;
+                setTimeout(() => { if(sceneActive) statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar"; }, 5000);
+            } else {
+                statusEl.innerText = "Bir sonraki oylama gelene kadar müziğin keyfini çıkar";
+            }
+        });
+
+        // --- VERİ KAYIT VE UI ---
+
+        function saveData() {
+            socket.emit('update_repertuar', { categories, songs: allSongs });
+        }
+
+        function startScene() { socket.emit('sahne_durumu_degistir', true); closeAdmin(); }
+        
+        function stopScene() {
+            if(confirm("Sahne bitirilsin mi?")) {
+                socket.emit('sahne_durumu_degistir', false);
+                socket.emit('anketi_bitir_sinyali', null);
+            }
+        }
+
+        function openAdmin() { document.getElementById('layer-admin').style.display = 'block'; }
+        function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
+        function closeLayer(id) { document.getElementById(id).style.display = 'none'; }
+
+        function renderCategories() {
+            document.getElementById('layer-cats').style.display = 'block';
+            const cont = document.getElementById('cat-list');
+            cont.innerHTML = categories.map(c => `
+                <div class="cat-item">
+                    <div class="item-header" onclick="toggleActions('cat-${c.id}')">
+                        <span>${c.name.toUpperCase()}</span><i class="fas fa-chevron-down"></i>
+                    </div>
+                    <div id="cat-${c.id}" class="confirm-area">
+                        <button class="menu-btn" style="background:var(--danger)" onclick="deleteCat(${c.id})">KATEGORİYİ SİL</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function deleteCat(catId) {
+            categories = categories.filter(c => c.id !== catId);
+            saveData();
+            renderCategories();
+        }
+
+        function toggleActions(id) {
+            const el = document.getElementById(id);
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function updateAdminUI() {
+            document.getElementById('btn-start').style.display = sceneActive ? 'none' : 'flex';
+            document.getElementById('btn-stop').style.display = sceneActive ? 'flex' : 'none';
+        }
+    </script>
+</body>
+</html>
