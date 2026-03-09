@@ -54,11 +54,22 @@
       font-size: 1.8rem;
       color: var(--primary);
       cursor: pointer;
+      opacity: 0.1; /* neredeyse görünmez */
       transition: transform 0.2s ease;
     }
-    #settings-icon:hover {
-      transform: rotate(90deg);
+    #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
+    /* LIVE yazısı */
+    #live-indicator {
+      position: fixed;
+      top: 15px;
+      right: 60px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: red;
+      display:none;
+      animation: blink 1s infinite;
     }
+    @keyframes blink { 50% { opacity:0; } }
   </style>
 </head>
 <body>
@@ -69,6 +80,7 @@
 
   <!-- Sağ üstte çark simgesi -->
   <i id="settings-icon" class="fas fa-cog" onclick="openAdmin()"></i>
+  <div id="live-indicator">LIVE</div>
 
   <div id="layer-admin" class="layer">
     <div><i class="fas fa-arrow-left" onclick="closeAdmin()"></i><h2>ADMİN PANELİ</h2></div>
@@ -78,10 +90,13 @@
     <button id="btn-stop" class="menu-btn" style="background:var(--danger); display:none;" onclick="stopScene()">
       <i class="fas fa-stop"></i> SAHNEYİ BİTİR
     </button>
+    <button id="btn-results" class="menu-btn" style="background:var(--primary); display:none;" onclick="showResults()">
+      <i class="fas fa-chart-bar"></i> SONUÇLAR
+    </button>
     
-    <!-- Mesaj Paneli -->
+    <!-- Bekleme Metni -->
     <button class="menu-btn" onclick="toggleMessagePanel()">
-      <i class="fas fa-edit"></i> MESAJI GÜNCELLE
+      <i class="fas fa-edit"></i> BEKLEME METNİ
     </button>
     <div id="message-panel">
       <input type="text" id="msg-input" placeholder="Bekleme mesajı yaz">
@@ -90,18 +105,17 @@
       </button>
     </div>
 
-    <button class="menu-btn" onclick="renderCategories()">
-      <i class="fas fa-music"></i> REPERTUAR DÜZENLE
+    <!-- Repertuar -->
+    <button id="btn-repertuar" class="menu-btn" onclick="renderRepertuar()">
+      <i class="fas fa-music"></i> REPERTUAR
     </button>
   </div>
 
-  <div id="layer-cats" class="layer">
-    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-cats')"></i><h2>REPERTUAR</h2></div>
-    <div id="cat-list"></div>
-    <input type="text" id="new-cat-name" placeholder="Yeni Kategori Adı">
-    <button class="menu-btn" style="background:var(--primary)" onclick="addCategory()">
-      <i class="fas fa-plus"></i> KATEGORİ EKLE
-    </button>
+  <div id="layer-repertuar" class="layer">
+    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i><h2>REPERTUAR</h2></div>
+    <button class="menu-btn"><i class="fas fa-cogs"></i> MEKAN AYARLARI</button>
+    <button class="menu-btn"><i class="fas fa-folder"></i> KATEGORİLER</button>
+    <button class="menu-btn"><i class="fas fa-music"></i> ŞARKILAR</button>
   </div>
 
 <script>
@@ -114,19 +128,15 @@ let isAdmin = false;
 // --- Admin panel açma/kapama ---
 function openAdmin() {
   const pass = prompt("Admin şifresi:");
-  if(pass === "1234") {
+  if(pass === "1167") {
     isAdmin = true;
     document.getElementById('layer-admin').style.display = 'block';
   } else {
     alert("Yanlış şifre!");
   }
 }
-function closeAdmin() {
-  document.getElementById('layer-admin').style.display = 'none';
-}
-function closeLayer(id) {
-  document.getElementById(id).style.display = 'none';
-}
+function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
+function closeLayer(id) { document.getElementById(id).style.display = 'none'; }
 
 // --- Mesaj Paneli ---
 function toggleMessagePanel() {
@@ -148,38 +158,9 @@ function publishMessage() {
   }
 }
 
-// --- Diğer socket ve fonksiyonlar (server.js ile uyumlu) ---
-function saveData() { if(isAdmin) socket.emit('update_repertuar', { categories, songs: allSongs }); }
-function startScene() { if(isAdmin) socket.emit('sahne_durumu_degistir', true); closeAdmin(); }
-function stopScene() { if(isAdmin && confirm("Sahne bitirilsin mi?")) { socket.emit('sahne_durumu_degistir', false); socket.emit('anketi_bitir_sinyali', null); } }
-function addCategory() {
-  if(!isAdmin) return;
-  const name = document.getElementById('new-cat-name').value;
-  if(!name) return;
-  categories.push({ id: Date.now(), name });
-  document.getElementById('new-cat-name').value = '';
-  saveData();
-  renderCategories();
-}
-function renderCategories() {
-  document.getElementById('layer-cats').style.display = 'block';
-  document.getElementById('cat-list').innerHTML = categories.map(c => `
-    <div class="cat-item">
-      <span>${c.name.toUpperCase()}</span>
-      <button class="menu-btn" style="background:var(--danger)" onclick="deleteCat(${c.id})"><i class="fas fa-trash"></i> SİL</button>
-    </div>`).join('');
-}
-function deleteCat(catId) {
-  if(!isAdmin) return;
-  categories = categories.filter(c => c.id !== catId);
-  allSongs = allSongs.map(s => (s.catId === catId ? { ...s, catId:null } : s));
-  saveData();
-  renderCategories();
-}
-function sendVote(optionId) {
-  socket.emit('oy_ver', optionId);
-  document.querySelectorAll('#options .menu-btn').forEach(btn => { btn.disabled=true; btn.style.opacity="0.5"; });
-}
-</script>
-</body>
-</html>
+// --- Sahne Başlat / Bitir ---
+function startScene() {
+  const pass = prompt("Sahne başlat şifresi:");
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
+  if(isAdmin) {
+    socket.emit('sahne_durumu_degistir', true);
