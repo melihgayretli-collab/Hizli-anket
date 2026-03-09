@@ -1,4 +1,10 @@
 {
-  "categories": [],
-  "songs": []
+  "categories": [
+    { "id": 1710000000001, "name": "Anadolu Rock" },
+    { "id": 1710000000002, "name": "Pop" }
+  ],
+  "songs": [
+    { "id": 501, "name": "Tamirci Çırağı", "categoryId": 1710000000001 },
+    { "id": 502, "name": "Resimdeki Gözyaşları", "categoryId": 1710000000001 }
+  ]
 }
