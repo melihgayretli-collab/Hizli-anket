@@ -2,235 +2,155 @@
 <html lang="tr">
 <head>
   <meta charset="UTF-8">
-  <title>Anket Sahne | Premium</title>
+  <title>Anket Sahne</title>
   <script src="/socket.io/socket.io.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    :root {
-      --primary-neon: #38bdf8;
-      --accent-neon: #818cf8;
-      --danger-neon: #ef4444;
-      --success-neon: #22c55e;
-      --glass-bg: rgba(15, 23, 42, 0.8);
-      --glass-border: rgba(255, 255, 255, 0.1);
-    }
-
     body {
-      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('image1.png') no-repeat center center fixed;
+      background: url('image1.png') no-repeat center center fixed;
       background-size: cover;
       color: #f8fafc;
-      font-family: 'Poppins', 'Segoe UI', sans-serif;
-      margin: 0;
-      height: 100vh;
-      overflow: hidden;
+      font-family:'Segoe UI',sans-serif;
+      margin:0;
     }
-
-    /* Durum Mesajı - Glow Efekti */
-    #status { 
-      font-size: 1.6rem; 
-      text-align: center; 
-      margin-top: 60px; 
-      color: white; 
-      text-shadow: 0 0 15px var(--primary-neon);
-      display: none;
-      font-weight: 300;
-      padding: 0 20px;
+    #status { font-size:1.4rem; text-align:center; margin-top:50px; color:#38bdf8; display:none; }
+    .menu-btn {
+      width:80%;
+      max-width:600px;
+      padding:20px;
+      margin:20px 0;
+      border:none;
+      border-radius:16px;
+      background:#1e293b;
+      color:white;
+      font-size:1.4rem;
+      font-weight:bold;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      justify-content:center;
+      transition: background 0.3s;
     }
-
-    /* Admin İkonu */
+    .menu-btn:hover { background:#334155; }
+    .layer {
+      display:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(15,23,42,0.9);
+      backdrop-filter: blur(12px);
+      z-index:100;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center; /* ortalama */
+    }
     #settings-icon {
       position: fixed;
-      top: 20px;
-      right: 20px;
-      font-size: 2rem;
-      color: white;
+      top: 15px;
+      right: 15px;
+      font-size: 1.8rem;
+      color: #38bdf8;
       cursor: pointer;
-      opacity: 0.2;
-      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-      z-index: 1000;
+      opacity: 0.1;
+      transition: transform 0.2s ease;
     }
-    #settings-icon:hover { transform: rotate(180deg) scale(1.2); opacity: 0.8; color: var(--primary-neon); }
-
-    /* Canlı Göstergesi */
+    #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
     #live-indicator {
       position: fixed;
-      top: 25px;
-      right: 80px;
-      font-size: 1rem;
-      font-weight: 800;
-      letter-spacing: 2px;
-      color: var(--danger-neon);
-      display: none;
-      text-shadow: 0 0 10px var(--danger-neon);
-      animation: blink 1.5s infinite;
+      top: 15px;
+      right: 60px;
+      font-size: 1.4rem;
+      font-weight: bold;
+      color: red;
+      display:none;
+      animation: blink 1s infinite;
     }
-
-    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-
-    /* Katmanlar (Glassmorphism) */
-    .layer {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(circle at center, rgba(30, 41, 59, 0.7) 0%, rgba(15, 23, 42, 0.95) 100%);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      z-index: 100;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      animation: fadeIn 0.4s ease;
-    }
-
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-    .layer h2 {
-      font-weight: 700;
-      letter-spacing: 3px;
-      margin-bottom: 40px;
-      color: white;
-      text-transform: uppercase;
-      border-bottom: 2px solid var(--primary-neon);
-      padding-bottom: 10px;
-    }
-
-    /* Modern Buton Tasarımı */
-    .menu-btn {
-      width: 85%;
-      max-width: 450px;
-      padding: 18px;
-      margin: 12px 0;
-      border: 1px solid var(--glass-border);
-      border-radius: 20px;
-      background: rgba(255, 255, 255, 0.05);
-      color: white;
-      font-size: 1.1rem;
-      font-weight: 600;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      justify-content: center;
-      transition: all 0.3s ease;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-    }
-
-    .menu-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      transform: translateY(-3px);
-      box-shadow: 0 8px 25px rgba(0,0,0,0.4);
-      border-color: var(--primary-neon);
-    }
-
-    .menu-btn i { font-size: 1.3rem; color: var(--primary-neon); }
-
-    /* Geri Dön İkonu */
-    .fa-arrow-left {
-      position: absolute;
-      top: 30px;
-      left: 30px;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #94a3b8;
-      transition: color 0.3s;
-    }
-    .fa-arrow-left:hover { color: white; }
-
-    /* Bekleme Metni Paneli */
+    @keyframes blink { 50% { opacity:0; } }
     #message-panel {
-      display: none;
-      width: 85%;
-      max-width: 450px;
-      background: rgba(0, 0, 0, 0.3);
-      padding: 20px;
-      border-radius: 20px;
-      margin-top: -5px;
-      margin-bottom: 15px;
-      border: 1px solid var(--glass-border);
+      display:none;
+      margin-top:15px;
+      background:#1e293b;
+      padding:20px;
+      border-radius:12px;
+      width:80%;
+      max-width:600px;
     }
-
     #msg-input {
-      width: 100%;
-      box-sizing: border-box;
-      padding: 15px;
-      border-radius: 12px;
-      border: 1px solid #334155;
-      background: #0f172a;
-      color: white;
-      font-size: 1rem;
-      margin-bottom: 15px;
-      outline: none;
+      width:100%;
+      padding:12px;
+      margin-bottom:12px;
+      border-radius:10px;
+      border:1px solid #334155;
+      background:#0f172a;
+      color:white;
+      font-size:1.1rem;
     }
-    #msg-input:focus { border-color: var(--primary-neon); }
-
-    .toggle-btn { justify-content: space-between; }
-    .toggle-btn i:last-child { color: #64748b; font-size: 1rem; }
-
+    .toggle-btn {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:80%;
+      max-width:600px;
+      font-size:1.3rem;
+    }
   </style>
 </head>
 <body>
-
   <div id="status"></div>
   <div id="options"></div>
 
-  <i id="settings-icon" class="fas fa-sliders-h" onclick="openAdmin()"></i>
-  <div id="live-indicator">● LIVE</div>
+  <i id="settings-icon" class="fas fa-cog" onclick="openAdmin()"></i>
+  <div id="live-indicator">LIVE</div>
 
+  <!-- Admin Panel -->
   <div id="layer-admin" class="layer">
-    <i class="fas fa-arrow-left" onclick="closeAdmin()"></i>
-    <h2>ADMİN PANELİ</h2>
-    
-    <button id="btn-start" class="menu-btn" style="border-left: 5px solid var(--success-neon)" onclick="startScene()">
-      <i class="fas fa-play" style="color:var(--success-neon)"></i> SAHNEYİ BAŞLAT
-    </button>
-    
-    <button id="btn-stop" class="menu-btn" style="display:none; border-left: 5px solid var(--danger-neon)" onclick="stopScene()">
-      <i class="fas fa-power-off" style="color:var(--danger-neon)"></i> SAHNEYİ BİTİR
-    </button>
-    
-    <button id="btn-results" class="menu-btn" style="display:none;"><i class="fas fa-poll-h"></i> SONUÇLAR</button>
+    <div><i class="fas fa-arrow-left" onclick="closeAdmin()"></i><h2>ADMİN PANELİ</h2></div>
+    <button id="btn-start" class="menu-btn" style="background:#22c55e" onclick="startScene()"><i class="fas fa-microphone"></i> SAHNEYİ BAŞLAT</button>
+    <button id="btn-stop" class="menu-btn" style="background:#ef4444; display:none;" onclick="stopScene()"><i class="fas fa-stop"></i> SAHNEYİ BİTİR</button>
+    <button id="btn-results" class="menu-btn" style="background:#38bdf8; display:none;"><i class="fas fa-chart-bar"></i> SONUÇLAR</button>
 
+    <!-- Bekleme Metni toggle -->
     <div class="toggle-btn menu-btn" onclick="toggleMessagePanel()">
-      <span><i class="fas fa-comment-dots"></i> BEKLEME METNİ</span>
+      <span><i class="fas fa-edit"></i> BEKLEME METNİ</span>
       <i class="fas fa-chevron-down"></i>
     </div>
     <div id="message-panel">
-      <input type="text" id="msg-input" placeholder="Ekran mesajını buraya yazın...">
-      <button class="menu-btn" style="width:100%; margin:0; background: var(--primary-neon); color:#000;" onclick="publishMessage()">
-        <i class="fas fa-paper-plane" style="color:#000"></i> YAYINLA
-      </button>
+      <input type="text" id="msg-input" placeholder="Bekleme mesajı yaz">
+      <button class="menu-btn" style="background:#38bdf8" onclick="publishMessage()"><i class="fas fa-paper-plane"></i> YAYINLA</button>
     </div>
 
-    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-compact-disc"></i> REPERTUAR</button>
+    <button id="btn-repertuar" class="menu-btn" onclick="openRepertuar()"><i class="fas fa-music"></i> REPERTUAR</button>
   </div>
 
+  <!-- Repertuar ekranı -->
   <div id="layer-repertuar" class="layer">
-    <i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i>
-    <h2>REPERTUAR</h2>
-    <button class="menu-btn"><i class="fas fa-sliders-h"></i> MEKAN AYARLARI</button>
-    <button class="menu-btn"><i class="fas fa-th-list"></i> KATEGORİLER</button>
+    <div><i class="fas fa-arrow-left" onclick="closeLayer('layer-repertuar')"></i><h2>REPERTUAR</h2></div>
+    <button class="menu-btn"><i class="fas fa-cogs"></i> MEKAN AYARLARI</button>
+    <button class="menu-btn"><i class="fas fa-folder"></i> KATEGORİLER</button>
     <button class="menu-btn"><i class="fas fa-music"></i> ŞARKILAR</button>
   </div>
 
 <script>
-// Mantık (Logic) kısmı tamamen aynı bırakıldı.
 const socket = io();
 let isAdmin = false;
 
 function openAdmin() {
-  const pass = prompt("Erişim Şifresi:");
+  const pass = prompt("Admin şifresi:");
   if(pass === "1167") {
     isAdmin = true;
     document.getElementById('layer-admin').style.display = 'flex';
   } else {
-    alert("Yetkisiz Giriş!");
+    alert("Yanlış şifre!");
   }
 }
 function closeAdmin() { document.getElementById('layer-admin').style.display = 'none'; }
 
 function startScene() {
-  const pass = prompt("Onay Şifresi:");
-  if(pass !== "1167") { alert("Hatalı Şifre!"); return; }
+  const pass = prompt("Sahne başlat şifresi:");
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
   socket.emit('sahne_durumu_degistir', true);
   document.getElementById('status').innerText = "Bir sonraki oylamaya kadar müziğin keyfini çıkar";
   document.getElementById('status').style.display = 'block';
@@ -241,8 +161,8 @@ function startScene() {
 }
 
 function stopScene() {
-  const pass = prompt("Onay Şifresi:");
-  if(pass !== "1167") { alert("Hatalı Şifre!"); return; }
+  const pass = prompt("Sahne bitir şifresi:");
+  if(pass !== "1167") { alert("Yanlış şifre!"); return; }
   socket.emit('sahne_durumu_degistir', false);
   socket.emit('anketi_bitir_sinyali', null);
   document.getElementById('status').style.display = 'none';
