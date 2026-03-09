@@ -8,10 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Disk mount path
 const DATA_PATH = path.join('/var/istek', 'db.json');
-
-// Eğer dosya yoksa oluştur
 fs.ensureFileSync(DATA_PATH);
 if (fs.readFileSync(DATA_PATH, 'utf8').trim() === '') {
   fs.writeFileSync(DATA_PATH, JSON.stringify({ categories: [], songs: [] }, null, 2));
