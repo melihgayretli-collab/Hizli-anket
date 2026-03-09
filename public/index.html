@@ -14,15 +14,84 @@
       margin:0;
     }
     #status { font-size:1.2rem; text-align:center; margin-top:50px; color:#38bdf8; display:none; }
-    .menu-btn { width:100%; max-width:300px; padding:15px; margin:10px 0; border:none; border-radius:12px; background:#1e293b; color:white; font-weight:bold; cursor:pointer; display:flex; align-items:center; gap:10px; justify-content:center; }
-    .layer { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter: blur(8px); padding:20px; z-index:100; overflow-y:auto; border-radius:12px; }
-    #settings-icon { position: fixed; top: 15px; right: 15px; font-size: 1.8rem; color: #38bdf8; cursor: pointer; opacity: 0.1; transition: transform 0.2s ease; }
+    .menu-btn {
+      width:80%;
+      max-width:500px;
+      padding:15px;
+      margin:15px 0;
+      border:none;
+      border-radius:12px;
+      background:#1e293b;
+      color:white;
+      font-size:1.2rem;
+      font-weight:bold;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      justify-content:center;
+    }
+    .layer {
+      display:none;
+      position:fixed;
+      top:0; left:0;
+      width:100%; height:100%;
+      background:rgba(15,23,42,0.85);
+      backdrop-filter: blur(8px);
+      padding:40px;
+      z-index:100;
+      overflow-y:auto;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+    }
+    #settings-icon {
+      position: fixed;
+      top: 15px;
+      right: 15px;
+      font-size: 1.8rem;
+      color: #38bdf8;
+      cursor: pointer;
+      opacity: 0.1;
+      transition: transform 0.2s ease;
+    }
     #settings-icon:hover { transform: rotate(90deg); opacity:0.3; }
-    #live-indicator { position: fixed; top: 15px; right: 60px; font-size: 1.2rem; font-weight: bold; color: red; display:none; animation: blink 1s infinite; }
+    #live-indicator {
+      position: fixed;
+      top: 15px;
+      right: 60px;
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: red;
+      display:none;
+      animation: blink 1s infinite;
+    }
     @keyframes blink { 50% { opacity:0; } }
-    #message-panel { display:none; margin-top:10px; background:#1e293b; padding:15px; border-radius:10px; }
-    #msg-input { width:100%; padding:10px; margin-bottom:10px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:white; }
-    .toggle-btn { display:flex; align-items:center; justify-content:space-between; width:100%; max-width:300px; }
+    #message-panel {
+      display:none;
+      margin-top:10px;
+      background:#1e293b;
+      padding:15px;
+      border-radius:10px;
+      width:80%;
+      max-width:500px;
+    }
+    #msg-input {
+      width:100%;
+      padding:10px;
+      margin-bottom:10px;
+      border-radius:8px;
+      border:1px solid #334155;
+      background:#0f172a;
+      color:white;
+    }
+    .toggle-btn {
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      width:80%;
+      max-width:500px;
+    }
   </style>
 </head>
 <body>
@@ -67,7 +136,7 @@ function openAdmin() {
   const pass = prompt("Admin şifresi:");
   if(pass === "1167") {
     isAdmin = true;
-    document.getElementById('layer-admin').style.display = 'block';
+    document.getElementById('layer-admin').style.display = 'flex';
   } else {
     alert("Yanlış şifre!");
   }
@@ -112,7 +181,7 @@ function publishMessage() {
 }
 
 function openRepertuar() {
-  document.getElementById('layer-repertuar').style.display = 'block';
+  document.getElementById('layer-repertuar').style.display = 'flex';
 }
 function closeLayer(id) {
   document.getElementById(id).style.display = 'none';
