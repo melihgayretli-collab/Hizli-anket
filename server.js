@@ -20,7 +20,6 @@ function writeDB(data) { fs.writeJsonSync(DATA_PATH, data, { spaces: 2 }); }
 app.use(express.static(path.join(__dirname, 'public')));
 
 let sceneActive = false;
-let currentPoll = null;
 let waitingMessage = "Bekleme mesajı";
 
 io.on('connection', (socket) => {
@@ -37,42 +36,6 @@ io.on('connection', (socket) => {
     sceneActive = isActive;
     if(isActive) waitingMessage = "Bir sonraki oylamaya kadar müziğin keyfini çıkar";
     io.emit('sahne_durumu_guncelle', sceneActive);
-    io.emit('bekleme_mesaji_guncelle', waitingMessage);
-  });
-
-  socket.on('update_repertuar', (data) => {
-    const db = readDB();
-    db.categories = data.categories;
-    db.songs = data.songs;
-    writeDB(db);
-    io.emit('init_data', db);
-  });
-
-  socket.on('anket_baslat', (poll) => {
-    currentPoll = { ...poll, votes: {} };
-    io.emit('yeni_anket_geldi', currentPoll);
-  });
-
-  socket.on('oy_ver', (optionId) => {
-    if (!currentPoll) { socket.emit('oy_reddedildi', "Aktif anket yok."); return; }
-    if (!currentPoll.votes[optionId]) currentPoll.votes[optionId] = 0;
-    currentPoll.votes[optionId]++;
-    socket.emit('oy_onaylandi');
-    io.emit('oy_guncellendi', currentPoll);
-  });
-
-  socket.on('anketi_bitir_sinyali', () => {
-    if (!currentPoll) return;
-    let winner = null, maxVotes = -1;
-    for (const [optId, count] of Object.entries(currentPoll.votes)) {
-      if (count > maxVotes) {
-        maxVotes = count;
-        winner = currentPoll.options.find(o => o.id === optId)?.name;
-      }
-    }
-    io.emit('anket_temizle', winner);
-    currentPoll = null;
-    waitingMessage = "Bir sonraki oylamaya kadar müziğin keyfini çıkar";
     io.emit('bekleme_mesaji_guncelle', waitingMessage);
   });
 });
