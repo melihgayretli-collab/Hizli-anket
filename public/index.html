@@ -19,10 +19,9 @@
         .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1; }
         .content { position: relative; z-index: 10; padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; }
         
-        /* İzleyici Ekranı Metin Boyutu (Yarıya düşürüldü) */
-        #waiting-display { font-size: 1.25rem; font-weight: bold; transition: all 0.3s; width: 100%; }
-        .waiting-line { margin: 5px 0; min-height: 1.5rem; display: block; width: 100%; }
-        
+        /* İzleyici Ekranı */
+        #waiting-display { transition: all 0.3s; width: 100%; }
+        .waiting-line { margin: 5px 0; min-height: 1.2rem; display: block; width: 100%; line-height: 1.2; }
         #poll-display { display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; }
 
         /* Admin Portalı */
@@ -42,14 +41,15 @@
         .admin-main-btn:hover { background: #374151; }
         .action-btn { padding: 15px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; }
         
-        /* Bekleme Ekranı Düzenleme Araçları */
+        /* Bekleme Ekranı Düzenleme */
         .line-edit-box { background: var(--input-bg); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
-        .line-tools { display: flex; gap: 20px; color: #9ca3af; font-size: 1.2rem; border-top: 1px solid #374151; padding-top: 10px; }
+        .line-tools { display: flex; gap: 15px; color: #9ca3af; font-size: 1.1rem; border-top: 1px solid #374151; padding-top: 10px; align-items: center; }
         .line-tools i { cursor: pointer; }
         .line-tools i.active { color: var(--success); }
+        .punto-select { background: #111827; color: white; border: 1px solid #374151; border-radius: 4px; padding: 2px 5px; font-size: 0.8rem; }
         .admin-input { background: transparent; border: none; color: white; font-size: 1.1rem; width: 100%; outline: none; }
 
-        /* Saydam Admin Çarkı */
+        /* Saydam Çark */
         #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem; }
     </style>
 </head>
@@ -70,13 +70,13 @@
     <button id="admin-trigger" onclick="checkAdminPassword()"><i class="fas fa-cog"></i></button>
 
     <div id="admin-portal">
-        
         <div id="page-main" class="admin-page active">
+            <h3 style="text-align:center; margin-bottom: 20px;"><i class="fas fa-cog"></i> Admin Panel</h3>
             <button class="admin-main-btn" onclick="startScene()">Sahne Başlat <i class="fas fa-play"></i></button>
             <button class="admin-main-btn" onclick="openPage('page-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
             <button class="admin-main-btn" onclick="openPage('page-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
             
-            <button class="admin-main-btn" style="margin-top:20px; border-color: var(--danger);" onclick="closePortal()">
+            <button class="admin-main-btn" style="margin-top:20px;" onclick="closePortal()">
                 İzleyici Sayfasına Dön <i class="fas fa-arrow-left"></i>
             </button>
         </div>
@@ -90,6 +90,12 @@
                     <i class="fas fa-align-left" onclick="setAlign(1, 'left')"></i>
                     <i class="fas fa-align-center active" onclick="setAlign(1, 'center')"></i>
                     <i class="fas fa-align-right" onclick="setAlign(1, 'right')"></i>
+                    <select id="size-line1" class="punto-select" onchange="updateSizePreview(1)">
+                        <option value="1rem">Küçük</option>
+                        <option value="1.25rem" selected>Normal</option>
+                        <option value="1.75rem">Büyük</option>
+                        <option value="2.5rem">Dev</option>
+                    </select>
                     <i class="fas fa-trash" onclick="clearLine(1)" style="margin-left: auto;"></i>
                 </div>
             </div>
@@ -100,6 +106,12 @@
                     <i class="fas fa-align-left" onclick="setAlign(2, 'left')"></i>
                     <i class="fas fa-align-center active" onclick="setAlign(2, 'center')"></i>
                     <i class="fas fa-align-right" onclick="setAlign(2, 'right')"></i>
+                    <select id="size-line2" class="punto-select" onchange="updateSizePreview(2)">
+                        <option value="1rem">Küçük</option>
+                        <option value="1.25rem" selected>Normal</option>
+                        <option value="1.75rem">Büyük</option>
+                        <option value="2.5rem">Dev</option>
+                    </select>
                     <i class="fas fa-trash" onclick="clearLine(2)" style="margin-left: auto;"></i>
                 </div>
             </div>
@@ -121,10 +133,21 @@
         const socket = io();
         const ADMIN_PASS = "1167";
         let alignment = { 1: 'center', 2: 'center' };
+        let currentSceneState = { line1: '', line2: '', align1: 'center', align2: 'center', size1: '1.25rem', size2: '1.25rem' };
 
         function openPage(pageId) {
             document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
             document.getElementById(pageId).classList.add('active');
+            
+            // Bekleme ekranı sayfası açıldığında mevcut değerleri doldur
+            if(pageId === 'page-waiting') {
+                document.getElementById('input-line1').value = currentSceneState.line1;
+                document.getElementById('input-line2').value = currentSceneState.line2;
+                document.getElementById('size-line1').value = currentSceneState.size1;
+                document.getElementById('size-line2').value = currentSceneState.size2;
+                setAlign(1, currentSceneState.align1);
+                setAlign(2, currentSceneState.align2);
+            }
         }
 
         function checkAdminPassword() {
@@ -137,12 +160,12 @@
 
         function closePortal() { document.getElementById('admin-portal').style.display = 'none'; }
 
-        // Hizalama Fonksiyonu
         function setAlign(line, type) {
             alignment[line] = type;
             const tools = document.getElementById(`tools-line${line}`);
-            tools.querySelectorAll('i').forEach(i => i.classList.remove('active'));
-            tools.querySelector(`.fa-align-${type}`).classList.add('active');
+            tools.querySelectorAll('i:not(.fa-trash)').forEach(i => i.classList.remove('active'));
+            const target = tools.querySelector(`.fa-align-${type}`);
+            if(target) target.classList.add('active');
         }
 
         function clearLine(num) { document.getElementById(`input-line${num}`).value = ''; }
@@ -151,26 +174,31 @@
             const data = {
                 line1: document.getElementById('input-line1').value,
                 align1: alignment[1],
+                size1: document.getElementById('size-line1').value,
                 line2: document.getElementById('input-line2').value,
-                align2: alignment[2]
+                align2: alignment[2],
+                size2: document.getElementById('size-line2').value
             };
             socket.emit('bekleme_mesaji_degistir', data);
             alert("Yayınlandı!");
         }
 
         socket.on('bekleme_mesaji_guncelle', (data) => {
-            const l1View = document.getElementById('line1-view');
-            const l2View = document.getElementById('line2-view');
-            
             if (typeof data === 'object') {
-                l1View.innerText = data.line1 || '';
-                l1View.style.textAlign = data.align1 || 'center';
-                l2View.innerText = data.line2 || '';
-                l2View.style.textAlign = data.align2 || 'center';
+                currentSceneState = data;
+                const l1V = document.getElementById('line1-view');
+                const l2V = document.getElementById('line2-view');
+                
+                l1V.innerText = data.line1 || '';
+                l1V.style.textAlign = data.align1 || 'center';
+                l1V.style.fontSize = data.size1 || '1.25rem';
+                
+                l2V.innerText = data.line2 || '';
+                l2V.style.textAlign = data.align2 || 'center';
+                l2V.style.fontSize = data.size2 || '1.25rem';
                 
                 document.getElementById('waiting-display').style.display = (data.line1 || data.line2) ? 'block' : 'none';
             }
-            document.getElementById('poll-display').style.display = 'none';
         });
 
         function startScene() { alert("Sahne Başlatıldı!"); }
