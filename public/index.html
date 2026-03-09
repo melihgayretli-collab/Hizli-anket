@@ -9,47 +9,47 @@
     <style>
         :root {
             --primary: #4f46e5; --danger: #ef4444; --success: #10b981; --dark: #0f172a;
+            --panel-bg: #111827; --input-bg: #1f2937;
         }
         body { 
             font-family: 'Segoe UI', sans-serif; margin: 0; 
             background: #000 url('image1.png') no-repeat center center fixed; 
             background-size: cover; color: white; height: 100vh; overflow: hidden;
         }
-        .overlay { 
-            position: absolute; top:0; left:0; width:100%; height:100%; 
-            background: rgba(0,0,0,0.6); z-index: 1; 
-        }
-        .content { position: relative; z-index: 10; padding: 20px; text-align: center; }
+        .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1; }
+        .content { position: relative; z-index: 10; padding: 20px; text-align: center; height: 100%; display: flex; flex-direction: column; justify-content: center; }
         
-        /* Yayın Ekranları */
-        #waiting-display { font-size: 2.5rem; margin-top: 20%; font-weight: bold; }
-        #poll-display { display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; margin-top: 10%; }
-        
-        .vote-btn { 
-            display: block; width: 100%; padding: 15px; margin: 10px 0; 
-            background: var(--primary); border: none; color: white; border-radius: 8px; font-size: 1.2rem;
-        }
+        /* İzleyici Ekranı */
+        #waiting-display { font-size: 2.5rem; font-weight: bold; transition: all 0.3s; }
+        .waiting-line { margin: 10px 0; min-height: 3rem; }
+        #poll-display { display: none; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 15px; }
 
-        /* Sağ Üst Saydam Admin Butonu */
-        #admin-panel { 
-            position: fixed; top: 15px; right: 15px; z-index: 100;
+        /* Admin Paneli Ana Yapı */
+        #admin-portal { 
+            display: none; position: fixed; inset: 0; background: var(--panel-bg); 
+            z-index: 1000; padding: 20px; box-sizing: border-box;
         }
-        .admin-btn { 
-            background: transparent; border: none; color: rgba(255, 255, 255, 0.1); 
-            font-size: 1.8rem; cursor: pointer; transition: color 0.3s; 
-        }
-        .admin-btn:hover { color: rgba(255, 255, 255, 0.4); }
-        
-        .modal { 
-            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: var(--dark); padding: 20px; border-radius: 10px; z-index: 200; width: 90%; max-width: 400px;
-            box-shadow: 0 0 50px rgba(0,0,0,0.8); border: 1px solid #334155;
-        }
+        .admin-page { display: none; flex-direction: column; gap: 20px; max-width: 500px; margin: 0 auto; }
+        .admin-page.active { display: flex; }
 
-        input[type="text"] {
-            width: 100%; padding: 12px; margin-top: 10px; border-radius: 5px; border: 1px solid #334155;
-            background: #1e293b; color: white; box-sizing: border-box;
+        /* Butonlar */
+        .admin-main-btn {
+            background: var(--input-bg); border: 1px solid #374151; color: white;
+            padding: 20px; border-radius: 12px; font-size: 1.2rem; cursor: pointer;
+            display: flex; align-items: center; justify-content: space-between; transition: 0.2s;
         }
+        .admin-main-btn:hover { background: #374151; }
+        .action-btn { padding: 15px; border-radius: 8px; border: none; color: white; font-weight: bold; cursor: pointer; }
+        
+        /* Bekleme Ekranı Satırları */
+        .line-edit-box { background: var(--input-bg); padding: 15px; border-radius: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .line-tools { display: flex; gap: 15px; color: #9ca3af; font-size: 1.2rem; border-top: 1px solid #374151; pt: 10px; padding-top: 10px; }
+        .line-tools i { cursor: pointer; }
+        .line-tools i.active { color: var(--success); }
+        .admin-input { background: transparent; border: none; color: white; font-size: 1.1rem; width: 100%; outline: none; }
+
+        /* Gizli Çark */
+        #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.5rem; }
     </style>
 </head>
 <body>
@@ -57,93 +57,101 @@
 
     <div class="content">
         <div id="waiting-display">
-            <h2 id="waiting-text"></h2>
+            <div id="line1-view" class="waiting-line"></div>
+            <div id="line2-view" class="waiting-line"></div>
         </div>
-
         <div id="poll-display">
             <h2 id="poll-question">Hangi Şarkıyı Çalalım?</h2>
             <div id="poll-options"></div>
         </div>
     </div>
 
-    <div id="admin-panel">
-        <button class="admin-btn" onclick="checkAdminPassword()"><i class="fas fa-cog"></i></button>
-    </div>
+    <button id="admin-trigger" onclick="checkAdminPassword()"><i class="fas fa-cog"></i></button>
 
-    <div id="admin-modal" class="modal">
-        <h3 style="margin-top:0; color:var(--success)">Yönetim Paneli Active</h3>
+    <div id="admin-portal">
         
-        <div style="margin-bottom: 20px;">
-            <label>Ekrana Metin Gönder:</label>
-            <input type="text" id="new-waiting-msg" placeholder="Mesajınızı yazın...">
-            <button onclick="updateWaitingMsg()" style="width:100%; margin-top:15px; background: var(--success); color:white; border:none; padding:12px; border-radius:5px; font-weight:bold; cursor:pointer;">YAYINLA</button>
+        <div id="page-main" class="admin-page active">
+            <h2 style="text-align:center; color: var(--primary);">Yönetim Paneli</h2>
+            <button class="admin-main-btn" onclick="startScene()">Sahne Başlat <i class="fas fa-play"></i></button>
+            <button class="admin-main-btn" onclick="openPage('page-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
+            <button class="admin-main-btn" onclick="openPage('page-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
+            <button class="action-btn" style="background:transparent; color:#6b7280" onclick="closePortal()">Portalı Kapat</button>
         </div>
 
-        <div id="repertuar-ozet">
-            <button onclick="renderAnketSecimi()" style="width:100%; background: var(--primary); color:white; border:none; padding:12px; border-radius:5px; font-weight:bold; cursor:pointer;">ANKET BAŞLAT</button>
+        <div id="page-waiting" class="admin-page">
+            <h3><i class="fas fa-desktop"></i> Bekleme Ekranı</h3>
+            <div class="line-edit-box">
+                <input type="text" id="input-line1" class="admin-input" placeholder="1. Satır metni...">
+                <div class="line-tools">
+                    <i class="fas fa-align-center active"></i> <i class="fas fa-trash" onclick="clearLine(1)"></i>
+                </div>
+            </div>
+            <div class="line-edit-box">
+                <input type="text" id="input-line2" class="admin-input" placeholder="2. Satır metni...">
+                <div class="line-tools">
+                    <i class="fas fa-align-center active"></i> <i class="fas fa-trash" onclick="clearLine(2)"></i>
+                </div>
+            </div>
+            <button class="action-btn" style="background: var(--success);" onclick="publishWaiting()">YAYINLA</button>
+            <button class="action-btn" style="background: var(--input-bg);" onclick="openPage('page-main')">GERİ</button>
         </div>
-        
-        <button onclick="closeAdmin()" style="width:100%; margin-top:20px; background:transparent; color:#94a3b8; border:1px solid #334155; padding:8px; border-radius:5px; cursor:pointer;">KAPAT</button>
+
+        <div id="page-repertuar" class="admin-page">
+            <h3><i class="fas fa-music"></i> Repertuar Düzenle</h3>
+            <button class="admin-main-btn">Mekan Şablonları <i class="fas fa-building"></i></button>
+            <button class="admin-main-btn">Kategoriler <i class="fas fa-list"></i></button>
+            <button class="admin-main-btn">Şarkılar <i class="fas fa-microphone"></i></button>
+            <button class="action-btn" style="background: var(--input-bg); margin-top:20px;" onclick="openPage('page-main')">GERİ</button>
+        </div>
+
     </div>
 
     <script>
         const socket = io();
         const ADMIN_PASS = "1167";
-        let db = { categories: [], songs: [] };
 
-        socket.on('init_data', data => { db = data; });
+        // Sayfa Yönetimi
+        function openPage(pageId) {
+            document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+        }
 
-        // Şifre Kontrolü ve Panel Açılışı
         function checkAdminPassword() {
-            const pass = prompt("Yönetici Şifresi:");
+            const pass = prompt("Şifre:");
             if (pass === ADMIN_PASS) {
-                document.getElementById('admin-modal').style.display = 'block';
-            } else if (pass !== null) {
-                alert("Hatalı Şifre!");
+                document.getElementById('admin-portal').style.display = 'block';
+                openPage('page-main');
             }
         }
 
-        // MESAJ YAYINI
-        socket.on('bekleme_mesaji_guncelle', (msg) => {
-            if (msg) {
-                document.getElementById('waiting-text').innerText = msg;
-                document.getElementById('waiting-display').style.display = 'block';
-                document.getElementById('poll-display').style.display = 'none';
-            }
-        });
+        function closePortal() { document.getElementById('admin-portal').style.display = 'none'; }
 
-        // ANKET YAYINI
-        socket.on('anket_guncelle', (poll) => {
-            document.getElementById('waiting-display').style.display = 'none';
-            document.getElementById('poll-display').style.display = 'block';
-            const optDiv = document.getElementById('poll-options');
-            optDiv.innerHTML = '';
+        // Bekleme Ekranı İşlemleri
+        function clearLine(num) { document.getElementById(`input-line${num}`).value = ''; }
+
+        function publishWaiting() {
+            const l1 = document.getElementById('input-line1').value;
+            const l2 = document.getElementById('input-line2').value;
+            socket.emit('bekleme_mesaji_degistir', { line1: l1, line2: l2 });
+            alert("Yayınlandı!");
+        }
+
+        socket.on('bekleme_mesaji_guncelle', (data) => {
+            const l1View = document.getElementById('line1-view');
+            const l2View = document.getElementById('line2-view');
             
-            poll.options.forEach(opt => {
-                const btn = document.createElement('button');
-                btn.className = 'vote-btn';
-                btn.innerText = `${opt.name}`;
-                btn.onclick = () => { socket.emit('oy_ver', opt.id); btn.disabled = true; btn.style.opacity = '0.5'; };
-                optDiv.appendChild(btn);
-            });
+            // Eğer veri objeyse (yeni yapı), değilse eski string yapıya uyum sağla
+            const line1 = typeof data === 'object' ? data.line1 : data;
+            const line2 = typeof data === 'object' ? data.line2 : '';
+
+            l1View.innerText = line1 || '';
+            l2View.innerText = line2 || '';
+            
+            document.getElementById('waiting-display').style.display = (line1 || line2) ? 'block' : 'none';
+            document.getElementById('poll-display').style.display = 'none';
         });
 
-        function closeAdmin() {
-            document.getElementById('admin-modal').style.display = 'none';
-        }
-
-        function updateWaitingMsg() {
-            const msg = document.getElementById('new-waiting-msg').value;
-            if(msg.trim() !== "") {
-                socket.emit('bekleme_mesaji_degistir', msg);
-                document.getElementById('new-waiting-msg').value = ""; // Inputu temizle
-                closeAdmin();
-            }
-        }
-
-        function renderAnketSecimi() {
-            alert("Repertuar Düzenle menüsü aktif ediliyor...");
-        }
+        function startScene() { alert("Sahne Başlatıldı!"); }
     </script>
 </body>
 </html>
