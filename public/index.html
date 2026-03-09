@@ -148,6 +148,4 @@ function deleteCat(catId) {
   renderCategories();
 }
 
-function sendVote(optionId) {
-  socket.emit('oy_ver', optionId);
-  document.querySelectorAll('#options .menu-btn').forEach(btn => { btn.disabled
+function sendVote(optionId
