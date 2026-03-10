@@ -16,30 +16,17 @@
         
         .content { position: relative; z-index: 10; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
         .waiting-line { transition: opacity 0.5s ease, transform 0.5s ease; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
-        
+
         #admin-portal { display: none; position: fixed; inset: 0; background: var(--panel-bg); z-index: 1000; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
         
         .admin-main-btn { 
-            background: var(--input-bg); 
-            border: 1px solid #374151; 
-            color: white; 
-            padding: 18px 20px; 
-            border-radius: 12px; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            text-decoration: none; 
-            font-size: 1.1rem; 
-            width: 100%; 
-            margin-bottom: 12px; 
-            box-sizing: border-box;
-            min-height: 65px;
+            background: var(--input-bg); border: 1px solid #374151; color: white; padding: 18px 20px; border-radius: 12px; cursor: pointer; 
+            display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem; width: 100%; margin-bottom: 12px; box-sizing: border-box; min-height: 65px; flex-shrink: 0;
         }
 
-        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-top: 3px solid var(--primary); }
+        .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s; border-top: 3px solid var(--primary); }
         .drawer.active { bottom: 0; }
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
         .drawer-overlay.active { display: block; }
@@ -52,15 +39,14 @@
         .cat-songs { display: none; padding: 10px; background: rgba(0,0,0,0.2); border-top: 1px solid #374151; }
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .line-tools { display: flex; gap: 15px; align-items: center; color: #9ca3af; margin-top: 5px; }
+        .line-tools i { cursor: pointer; font-size: 1.2rem; }
         #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.8rem; }
     </style>
 </head>
 <body>
     <div class="overlay"></div>
-    <div class="content">
-        <div id="v1" class="waiting-line"></div>
-        <div id="v2" class="waiting-line"></div>
-    </div>
+    <div class="content"><div id="v1" class="waiting-line"></div><div id="v2" class="waiting-line"></div></div>
 
     <button id="admin-trigger" onclick="showAuthDrawer()"><i class="fas fa-cog"></i></button>
 
@@ -70,21 +56,34 @@
     <div id="admin-portal">
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center; margin-bottom: 25px;">Istek Portal - Yönetim</h3>
-            
-            <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">
-                Sahne Başlat <i class="fas fa-play"></i>
-            </button>
-
+            <button class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
             <div id="standard-menu">
-                <button class="admin-main-btn" onclick="openPage('p-repertuar')">
-                    Repertuar Düzenle <i class="fas fa-music"></i>
-                </button>
-                <button class="admin-main-btn" onclick="openPage('p-waiting')">
-                    Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i>
-                </button>
+                <button class="admin-main-btn" onclick="openPage('p-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
+                <button class="admin-main-btn" onclick="openPage('p-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
             </div>
-
             <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
+        </div>
+
+        <div id="p-waiting" class="admin-page">
+            <h3>Bekleme Ekranı Düzenle</h3>
+            <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
+                <input type="text" id="i1" class="admin-input" placeholder="Satır 1 Metni">
+                <div class="line-tools" id="t1">
+                    <i class="fas fa-align-left" onclick="align(1,'left')"></i><i class="fas fa-align-center" onclick="align(1,'center')"></i><i class="fas fa-align-right" onclick="align(1,'right')"></i>
+                    <select id="s1" style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;"><option value="1rem">Küçük</option><option value="1.5rem" selected>Normal</option><option value="2.5rem">Büyük</option></select>
+                    <i class="fas fa-trash" onclick="document.getElementById('i1').value=''" style="margin-left:auto; color:var(--danger)"></i>
+                </div>
+            </div>
+            <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
+                <input type="text" id="i2" class="admin-input" placeholder="Satır 2 Metni">
+                <div class="line-tools" id="t2">
+                    <i class="fas fa-align-left" onclick="align(2,'left')"></i><i class="fas fa-align-center" onclick="align(2,'center')"></i><i class="fas fa-align-right" onclick="align(2,'right')"></i>
+                    <select id="s2" style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;"><option value="1rem">Küçük</option><option value="1.5rem" selected>Normal</option><option value="2.5rem">Büyük</option></select>
+                    <i class="fas fa-trash" onclick="document.getElementById('i2').value=''" style="margin-left:auto; color:var(--danger)"></i>
+                </div>
+            </div>
+            <button class="action-btn" style="background:var(--success); margin-bottom:10px;" onclick="pubWait()">YAYINLA</button>
+            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-main')">GERİ</button>
         </div>
 
         <div id="p-repertuar" class="admin-page">
@@ -93,124 +92,74 @@
             <button class="admin-main-btn" onclick="openPage('p-songs')">Şarkılar <i class="fas fa-microphone"></i></button>
             <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
         </div>
-
         <div id="p-cats" class="admin-page">
-            <h3>Kategoriler</h3>
-            <button class="admin-main-btn" onclick="showNewCatDrawer()">Yeni Kategori <i class="fas fa-plus"></i></button>
-            <div id="cat-list-cont" style="margin-top:10px;"></div>
-            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button>
+            <h3>Kategoriler</h3><button class="admin-main-btn" onclick="showNewCatDrawer()">Yeni Kategori <i class="fas fa-plus"></i></button>
+            <div id="cat-list-cont" style="margin-top:10px;"></div><button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button>
         </div>
-
         <div id="p-songs" class="admin-page">
-            <h3>Tüm Şarkılar</h3>
-            <button class="admin-main-btn" onclick="showNewSongDrawer()">Yeni Şarkı Ekle <i class="fas fa-plus"></i></button>
-            <div id="song-list-cont" style="margin-top:10px;"></div>
-            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button>
-        </div>
-
-        <div id="p-waiting" class="admin-page">
-            <h3>Bekleme Ekranı Düzenle</h3>
-            <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
-                <input type="text" id="i1" class="admin-input" placeholder="Satır 1">
-                <input type="text" id="i2" class="admin-input" placeholder="Satır 2">
-            </div>
-            <button class="action-btn" style="background:var(--success); margin-bottom:10px;" onclick="alert('Yayınlandı')">YAYINLA</button>
-            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-main')">GERİ</button>
+            <h3>Tüm Şarkılar</h3><button class="admin-main-btn" onclick="showNewSongDrawer()">Yeni Şarkı Ekle <i class="fas fa-plus"></i></button>
+            <div id="song-list-cont" style="margin-top:10px;"></div><button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button>
         </div>
     </div>
 
     <script>
         const socket = io();
         let db = { categories: [], songs: [] };
+        let tempAligns = { 1: 'center', 2: 'center' };
 
         socket.on('init_data', d => { db = d; renderAll(); });
+        socket.on('bekleme_mesaji_guncelle', d => {
+            const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
+            v1.innerText = d.line1; v1.style.textAlign = d.align1; v1.style.fontSize = d.size1;
+            v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
+        });
+
+        function align(l, t) {
+            tempAligns[l] = t;
+            const tools = document.getElementById(`t${l}`);
+            tools.querySelectorAll('i').forEach(i => i.style.color = '#9ca3af');
+            const target = tools.querySelector(`.fa-align-${t}`);
+            if(target) target.style.color = 'var(--success)';
+        }
+
+        function pubWait() {
+            socket.emit('bekleme_mesaji_degistir', {
+                line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value,
+                line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value
+            });
+            openDrawer('<h4 style="text-align:center; color:var(--success)">Yayınlandı!</h4>');
+        }
 
         function renderAll() {
-            // Kategori Listesi
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
-                return `
-                <div class="cat-box">
-                    <button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">
-                        ${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i>
-                    </button>
-                    <div class="cat-songs">
-                        <div style="display:flex; gap:10px; margin-bottom:10px;">
-                            <button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button>
-                            <button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button>
-                        </div>
-                        ${songs.map(s => `
-                            <div class="list-item">
-                                <span>${s.name}</span>
-                                <i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>`;
+                return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button><div class="cat-songs"><div style="display:flex; gap:10px; margin-bottom:10px;"><button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button><button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button></div>${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}</div></div>`;
             }).join('');
 
-            // Şarkı Listesi (Geri Gelen Select Yapısı)
             document.getElementById('song-list-cont').innerHTML = db.songs.map(s => {
                 let opts = db.categories.map(c => `<option value="${c.id}" ${s.catId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
-                return `
-                <div class="list-item">
-                    <span style="flex:1">${s.name}</span>
-                    <select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)">
-                        <option value="">-</option>
-                        ${opts}
-                    </select>
-                    <i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i>
-                </div>`;
+                return `<div class="list-item"><span style="flex:1">${s.name}</span><select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)"><option value="">-</option>${opts}</select><i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i></div>`;
             }).join('');
         }
 
-        // BOŞTA OLMA ŞARTI: Sadece catId'si olmayan şarkılar listelenir
         function showAddSongToCatDrawer(catId) {
             const freeSongs = db.songs.filter(s => !s.catId);
             let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`;
-            if(freeSongs.length === 0) {
-                html += `<p style="text-align:center; padding:20px; color:#9ca3af;">Atanacak boşta şarkı yok.</p>`;
-            } else {
-                html += freeSongs.map(s => `
-                    <div class="list-item">
-                        <span>${s.name}</span>
-                        <i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i>
-                    </div>`).join('');
-            }
-            html += `</div>`;
-            openDrawer(html);
+            html += freeSongs.length === 0 ? `<p style="text-align:center; color:#9ca3af;">Boşta şarkı yok.</p>` : freeSongs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i></div>`).join('');
+            openDrawer(html + `</div>`);
         }
 
-        function assignToCat(sId, cId) {
-            const song = db.songs.find(x => x.id == sId);
-            if(song) {
-                song.catId = cId ? parseInt(cId) : null;
-                socket.emit('db_update', db);
-                closeDrawer();
-            }
-        }
-
-        // Yönetici Girişi
-        function showAuthDrawer() { 
-            openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); 
-        }
-        function checkAuth() {
-            if(document.getElementById('admin-pw').value === "1167") {
-                closeDrawer();
-                document.getElementById('admin-portal').style.display = 'block';
-            } else { alert("Hatalı!"); }
-        }
-
-        // Diğer Fonksiyonlar
+        function assignToCat(sId, cId) { db.songs.find(x => x.id == sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); closeDrawer(); }
+        function showAuthDrawer() { openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); }
+        function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; } else { alert("Hatalı!"); } }
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
-        function askStartScene() { openDrawer(`<h4>Sahne Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET</button>`); }
+        function askStartScene() { openDrawer(`<h4>Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET</button>`); }
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
         function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); } }
-        function askDelCat(id, name) { openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="confirmDelCat(${id})">SİL</button>`); }
-        function confirmDelCat(id) { db.categories = db.categories.filter(c => c.id !== id); db.songs.forEach(s => { if(s.catId == id) s.catId = null; }); socket.emit('db_update', db); closeDrawer(); }
+        function askDelCat(id, name) { openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.categories=db.categories.filter(c=>c.id!==${id});db.songs.forEach(s=>{if(s.catId==${id})s.catId=null;});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
         function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
         function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); } }
         function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
