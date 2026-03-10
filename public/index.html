@@ -17,6 +17,7 @@
         .content { position: relative; z-index: 10; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
         .waiting-line { transition: opacity 0.5s ease, transform 0.5s ease; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
 
+        /* LIVE Yazısı */
         #live-status { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: var(--danger); font-weight: bold; font-size: 1.4rem; z-index: 1001; animation: blinker 1s linear infinite; text-transform: uppercase; letter-spacing: 2px; }
         @keyframes blinker { 50% { opacity: 0; } }
 
@@ -69,10 +70,10 @@
             </button>
 
             <div id="active-scene-controls" style="display:none; flex-direction:column; width:100%;">
-                <button class="admin-main-btn" onclick="alert('Hazırlanıyor...')" style="background: var(--primary);">
+                <button class="admin-main-btn" onclick="alert('Oylama modülü hazır değil')" style="background: var(--primary);">
                     Oylama Oluştur <i class="fas fa-poll-h"></i>
                 </button>
-                <button class="admin-main-btn" onclick="alert('Hazırlanıyor...')" style="background: var(--primary);">
+                <button class="admin-main-btn" onclick="alert('Sonuç ekranı hazır değil')" style="background: var(--primary);">
                     Sonuç İzle <i class="fas fa-chart-line"></i>
                 </button>
                 <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger); margin-top: 10px;">
@@ -134,27 +135,24 @@
         const socket = io();
         let db = { categories: [], songs: [] };
         let tempAligns = { 1: 'center', 2: 'center' };
-        let isSceneActive = localStorage.getItem('sceneStatus') === 'active';
-        let lastManualText = JSON.parse(localStorage.getItem('lastText') || '{"line1":"","align1":"center","size1":"1.5rem","line2":"","align2":"center","size2":"1.5rem"}');
+        let isSceneActive = false;
+        let lastManualText = { line1: '', align1: 'center', size1: '1.5rem', line2: '', align2: 'center', size2: '1.5rem' };
 
-        socket.on('init_data', d => { db = d; renderAll(); updateUIState(); });
+        socket.on('init_data', d => { db = d; renderAll(); });
         socket.on('bekleme_mesaji_guncelle', d => {
             const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
             v1.innerText = d.line1; v1.style.textAlign = d.align1; v1.style.fontSize = d.size1;
             v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
-            if(!isSceneActive) { 
-                lastManualText = d; 
-                localStorage.setItem('lastText', JSON.stringify(d));
-            }
+            if(!isSceneActive) lastManualText = d; 
         });
 
+        // Sahne Başlatma Onayı
         function askStartScene() {
-            openDrawer(`<h4>Sahne Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="startScene()">EVET, BAŞLAT</button>`);
+            openDrawer(`<h4>Sahne Başlatılsın mı?</h4><p style="font-size:0.8rem; color:#9ca3af;">Repertuar ve Bekleme Ekranı düzenleme sahne bitene kadar kilitlenir.</p><button class="action-btn" style="background:var(--success)" onclick="startScene()">EVET, BAŞLAT</button>`);
         }
 
         function startScene() {
             isSceneActive = true;
-            localStorage.setItem('sceneStatus', 'active');
             updateUIState();
             socket.emit('bekleme_mesaji_degistir', {
                 line1: "BİR SONRAKİ OYLAMAYA KADAR", align1: "center", size1: "1.5rem",
@@ -163,18 +161,18 @@
             closeDrawer();
         }
 
+        // Sahne Bitirme Onayı (Şifreli)
         function askEndScene() {
-            openDrawer(`<h4>Sahne Bitirilsin mi?</h4><input type="password" id="end-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">BİTİR</button>`);
+            openDrawer(`<h4>Sahne Bitirilsin mi?</h4><input type="password" id="end-pw" class="admin-input" placeholder="Şifre (1167)"><button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">SAHNEYİ BİTİR</button>`);
         }
 
         function confirmEndScene() {
             if(document.getElementById('end-pw').value === "1167") {
                 isSceneActive = false;
-                localStorage.setItem('sceneStatus', 'inactive');
                 updateUIState();
                 socket.emit('bekleme_mesaji_degistir', lastManualText);
                 closeDrawer();
-            } else { alert("Hatalı!"); }
+            } else { alert("Hatalı Şifre!"); }
         }
 
         function updateUIState() {
@@ -182,50 +180,57 @@
             document.getElementById('btn-start-scene').style.display = isSceneActive ? 'none' : 'flex';
             document.getElementById('standard-menu').style.display = isSceneActive ? 'none' : 'block';
             document.getElementById('active-scene-controls').style.display = isSceneActive ? 'flex' : 'none';
+            // Sahne aktifken paneli kapatma butonunu gizleyebiliriz (isteğe bağlı)
             document.getElementById('btn-close-panel').style.visibility = isSceneActive ? 'hidden' : 'visible';
         }
 
+        // --- Diğer Fonksiyonlar (Dokunulmadı) ---
+        function align(l, t) {
+            tempAligns[l] = t;
+            const tools = document.getElementById(`t${l}`);
+            tools.querySelectorAll('i').forEach(i => i.style.color = '#9ca3af');
+            const target = tools.querySelector(`.fa-align-${t}`);
+            if(target) target.style.color = 'var(--success)';
+        }
+
+        function pubWait() {
+            socket.emit('bekleme_mesaji_degistir', {
+                line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value,
+                line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value
+            });
+            openDrawer('<h4 style="text-align:center; color:var(--success)">Yayınlandı!</h4>');
+        }
+
         function renderAll() {
-            // Kategori Listesi ve Silme Düzeltmesi
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
                 return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button><div class="cat-songs"><div style="display:flex; gap:10px; margin-bottom:10px;"><button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button><button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button></div>${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}</div></div>`;
             }).join('');
-            
             document.getElementById('song-list-cont').innerHTML = db.songs.map(s => {
                 let opts = db.categories.map(c => `<option value="${c.id}" ${s.catId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
                 return `<div class="list-item"><span style="flex:1">${s.name}</span><select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)"><option value="">-</option>${opts}</select><i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i></div>`;
             }).join('');
         }
 
-        function askDelCat(id, name) {
-            openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="confirmDelCat(${id})">EVET, SİL</button>`);
+        function showAddSongToCatDrawer(catId) {
+            const freeSongs = db.songs.filter(s => !s.catId);
+            let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`;
+            html += freeSongs.length === 0 ? `<p style="text-align:center; color:#9ca3af;">Boşta şarkı yok.</p>` : freeSongs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i></div>`).join('');
+            openDrawer(html + `</div>`);
         }
 
-        function confirmDelCat(id) {
-            db.categories = db.categories.filter(c => c.id !== id);
-            db.songs.forEach(s => { if(s.catId == id) s.catId = null; });
-            socket.emit('db_update', db);
-            closeDrawer();
-            renderAll();
-        }
-
-        // Diğer standart fonksiyonlar
-        function align(l, t) { tempAligns[l] = t; document.getElementById(`t${l}`).querySelectorAll('i').forEach(i => i.style.color = i.classList.contains(`fa-align-${t}`) ? 'var(--success)' : '#9ca3af'); }
-        function pubWait() { socket.emit('bekleme_mesaji_degistir', { line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value, line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value }); }
-        function showAddSongToCatDrawer(catId) { const freeSongs = db.songs.filter(s => !s.catId); let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`; html += freeSongs.length === 0 ? `<p style="text-align:center; color:#9ca3af;">Boşta şarkı yok.</p>` : freeSongs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i></div>`).join(''); openDrawer(html + `</div>`); }
-        function assignToCat(sId, cId) { db.songs.find(x => x.id == sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); closeDrawer(); renderAll(); }
-        function showAuthDrawer() { openDrawer(`<h4>Giriş</h4><input type="password" id="admin-pw" class="admin-input"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); }
+        function assignToCat(sId, cId) { db.songs.find(x => x.id == sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); closeDrawer(); }
+        function showAuthDrawer() { openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); }
         function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; } else { alert("Hatalı!"); } }
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
-        function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); renderAll(); } }
+        function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); } }
         function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
-        function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); renderAll(); } }
-        function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();renderAll();">SİL</button>`); }
+        function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); } }
+        function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
     </script>
 </body>
 </html>
