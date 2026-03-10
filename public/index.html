@@ -14,7 +14,6 @@
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000 url('image1.png') no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; }
         .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1; }
         
-        /* Kullanıcı Ekranı */
         .content { position: relative; z-index: 10; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .waiting-line { transition: 0.5s; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); width: 100%; }
         
@@ -25,17 +24,15 @@
         #live-status { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: var(--danger); font-weight: bold; font-size: 1.4rem; z-index: 1001; animation: blinker 1s linear infinite; text-transform: uppercase; letter-spacing: 2px; }
         @keyframes blinker { 50% { opacity: 0; } }
 
-        /* Admin Portal */
         #admin-portal { display: none; position: fixed; inset: 0; background: var(--panel-bg); z-index: 1000; padding: 20px; overflow-y: auto; }
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
         .admin-main-btn { background: var(--input-bg); border: 1px solid #374151; color: white; padding: 18px 20px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem; width: 100%; margin-bottom: 12px; min-height: 65px; }
         .admin-main-btn:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
 
-        /* Sonuç Bar Stilleri */
         .res-row { margin-bottom: 20px; }
         .res-bar-bg { background: #374151; height: 25px; border-radius: 12px; margin-top: 5px; overflow: hidden; position: relative; }
-        .res-bar-fill { background: var(--primary); height: 100%; transition: width 0.5s ease-out; width: 0%; }
+        .res-bar-fill { background: var(--primary); height: 100%; transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1); width: 0%; }
         .res-label { display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: bold; margin-bottom: 4px; }
 
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s; border-top: 3px solid var(--primary); }
@@ -78,30 +75,17 @@
     <div id="admin-portal">
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center; margin-bottom: 25px;">Istek Portal - Yönetim</h3>
-            
-            <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">
-                Sahne Başlat <i class="fas fa-play"></i>
-            </button>
+            <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
 
             <div id="active-scene-controls" style="display:none; flex-direction:column; width:100%;">
-                <button id="btn-create-poll" class="admin-main-btn" onclick="openPage('p-poll-create')" style="background: var(--primary);">
-                    Oylama Oluştur <i class="fas fa-poll-h"></i>
-                </button>
-                <button id="btn-results" class="admin-main-btn" onclick="openPage('p-results')" style="background: var(--primary);">
-                    Sonuç İzle <i class="fas fa-chart-line"></i>
-                </button>
-                <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger); margin-top: 10px;">
-                    Sahne Bitir <i class="fas fa-stop"></i>
-                </button>
+                <button id="btn-create-poll" class="admin-main-btn" onclick="openPage('p-poll-create')" style="background: var(--primary);">Oylama Oluştur <i class="fas fa-poll-h"></i></button>
+                <button id="btn-results" class="admin-main-btn" onclick="openPage('p-results')" style="background: var(--primary);">Sonuç İzle <i class="fas fa-chart-line"></i></button>
+                <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger); margin-top: 10px;">Sahne Bitir <i class="fas fa-stop"></i></button>
             </div>
 
             <div id="standard-menu" style="width:100%;">
-                <button class="admin-main-btn" onclick="openPage('p-repertuar')">
-                    Repertuar Düzenle <i class="fas fa-music"></i>
-                </button>
-                <button class="admin-main-btn" onclick="openPage('p-waiting')">
-                    Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i>
-                </button>
+                <button class="admin-main-btn" onclick="openPage('p-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
+                <button class="admin-main-btn" onclick="openPage('p-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
             </div>
             <button id="btn-close-panel" class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
         </div>
@@ -117,179 +101,133 @@
             <h3>Bekleme Ekranı Düzenle</h3>
             <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
                 <input type="text" id="i1" class="admin-input" placeholder="Satır 1 Metni">
-                <div class="line-tools" id="t1">
-                    <i class="fas fa-align-left" onclick="align(1,'left')"></i><i class="fas fa-align-center" onclick="align(1,'center')"></i><i class="fas fa-align-right" onclick="align(1,'right')"></i>
-                    <select id="s1" style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;"><option value="1rem">Küçük</option><option value="1.5rem" selected>Normal</option><option value="2.5rem">Büyük</option></select>
+                <div class="line-tools">
+                    <button onclick="align(1,'left')">Sol</button><button onclick="align(1,'center')">Orta</button><button onclick="align(1,'right')">Sağ</button>
+                    <select id="s1"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
                 </div>
             </div>
             <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
                 <input type="text" id="i2" class="admin-input" placeholder="Satır 2 Metni">
-                <div class="line-tools" id="t2">
-                    <i class="fas fa-align-left" onclick="align(2,'left')"></i><i class="fas fa-align-center" onclick="align(2,'center')"></i><i class="fas fa-align-right" onclick="align(2,'right')"></i>
-                    <select id="s2" style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;"><option value="1rem">Küçük</option><option value="1.5rem" selected>Normal</option><option value="2.5rem">Büyük</option></select>
+                <div class="line-tools">
+                    <button onclick="align(2,'left')">Sol</button><button onclick="align(2,'center')">Orta</button><button onclick="align(2,'right')">Sağ</button>
+                    <select id="s2"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
                 </div>
             </div>
             <button class="action-btn" style="background:var(--success); margin-bottom:10px;" onclick="pubWait()">YAYINLA</button>
             <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-main')">GERİ</button>
         </div>
-
         <div id="p-repertuar" class="admin-page">
             <h3>Repertuar Yönetimi</h3>
-            <button class="admin-main-btn" onclick="openPage('p-cats')">Kategoriler <i class="fas fa-list"></i></button>
-            <button class="admin-main-btn" onclick="openPage('p-songs')">Şarkılar <i class="fas fa-microphone"></i></button>
-            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
+            <button class="admin-main-btn" onclick="openPage('p-cats')">Kategoriler</button>
+            <button class="admin-main-btn" onclick="openPage('p-songs')">Şarkılar</button>
+            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-main')">GERİ</button>
         </div>
-        <div id="p-cats" class="admin-page"><h3>Kategoriler</h3><div id="cat-list-cont"></div><button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button></div>
-        <div id="p-songs" class="admin-page"><h3>Tüm Şarkılar</h3><div id="song-list-cont"></div><button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button></div>
-        <div id="p-poll-create" class="admin-page"><h3>Oylama Seçenekleri</h3><div id="poll-selection-cont"></div><button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">ANKETİ BAŞLAT</button><button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">VAZGEÇ</button></div>
+        <div id="p-cats" class="admin-page"><h3>Kategoriler</h3><div id="cat-list-cont"></div><button class="action-btn" onclick="openPage('p-repertuar')">GERİ</button></div>
+        <div id="p-songs" class="admin-page"><h3>Şarkılar</h3><div id="song-list-cont"></div><button class="action-btn" onclick="openPage('p-repertuar')">GERİ</button></div>
+        <div id="p-poll-create" class="admin-page"><h3>Oylama Seçenekleri</h3><div id="poll-selection-cont"></div><button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">BAŞLAT</button><button class="action-btn" onclick="openPage('p-main')">GERİ</button></div>
     </div>
 
     <script>
         const socket = io();
-        let db = { categories: [], songs: [], sceneActive: false, lastManual: {line1:"", align1:"center", size1:"1.5rem", line2:"", align2:"center", size2:"1.5rem"}, activePoll: null };
+        let db = { categories: [], songs: [], sceneActive: false, lastManual: {}, activePoll: null };
         let tempAligns = { 1: 'center', 2: 'center' };
 
         socket.on('init_data', d => { db = d; renderAll(); updateUIState(); });
-        socket.on('start_poll', pollData => { db.activePoll = pollData; updateUIState(); });
-
+        
+        // KRİTİK: Güncelleme geldiğinde zorunlu render
         socket.on('poll_update', pollData => {
+            console.log("Yeni oy verisi geldi:", pollData);
             db.activePoll = pollData;
-            // Eğer admin sonuç sayfasındaysa barları anlık güncelle
-            if(document.getElementById('p-results').classList.contains('active')) {
-                renderResults();
-            }
+            if(document.getElementById('p-results').classList.contains('active')) renderResults();
             updateUIState();
         });
 
+        socket.on('start_poll', p => { db.activePoll = p; updateUIState(); });
         socket.on('bekleme_mesaji_guncelle', d => {
-            const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
-            v1.innerText = d.line1; v1.style.textAlign = d.align1; v1.style.fontSize = d.size1;
-            v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
-            if(!db.sceneActive) db.lastManual = d;
+            document.getElementById('v1').innerText = d.line1; document.getElementById('v1').style.textAlign = d.align1;
+            document.getElementById('v2').innerText = d.line2; document.getElementById('v2').style.textAlign = d.align2;
         });
+
+        function renderResults() {
+            const cont = document.getElementById('results-cont');
+            if(!db.activePoll || !db.activePoll.options) return;
+
+            // Toplam oyu hesapla (Sayıya zorla)
+            const total = db.activePoll.options.reduce((s, o) => s + (Number(o.votes) || 0), 0);
+            
+            cont.innerHTML = `<div style="text-align:center; color:var(--success); font-weight:bold; margin-bottom:15px;">Toplam: ${total} Oy</div>` + 
+            db.activePoll.options.map(opt => {
+                const v = Number(opt.votes) || 0;
+                const p = total > 0 ? Math.round((v / total) * 100) : 0;
+                return `<div class="res-row">
+                    <div class="res-label"><span>${opt.name}</span><span>${v} Oy (%${p})</span></div>
+                    <div class="res-bar-bg"><div class="res-bar-fill" style="width:${p}%"></div></div>
+                </div>`;
+            }).join('');
+        }
+
+        function castVote(optId) {
+            console.log("Oy veriliyor ID:", optId);
+            socket.emit('submit_vote', optId); // Sunucuya sadece ID gönderiyoruz
+            document.getElementById('poll-view').innerHTML = `<h2 style="color:var(--success)">Oyun Kaydedildi!</h2><p>Sonuçları sahneden takip edebilirsin.</p>`;
+        }
 
         function updateUIState() {
             const isLive = db.sceneActive;
             const hasPoll = db.activePoll !== null;
             document.getElementById('live-status').style.display = isLive ? 'block' : 'none';
+            document.getElementById('active-scene-controls').style.display = isLive ? 'flex' : 'none';
             document.getElementById('btn-start-scene').style.display = isLive ? 'none' : 'flex';
             document.getElementById('standard-menu').style.display = isLive ? 'none' : 'block';
-            document.getElementById('active-scene-controls').style.display = isLive ? 'flex' : 'none';
-            document.getElementById('btn-close-panel').style.visibility = isLive ? 'hidden' : 'visible';
-            document.getElementById('btn-create-poll').disabled = hasPoll;
             document.getElementById('btn-results').disabled = !hasPoll;
-            
+
             if(hasPoll) {
-                document.getElementById('btn-create-poll').innerHTML = `Anket Yayında <i class="fas fa-spinner fa-spin"></i>`;
-                showPollToUser(db.activePoll);
+                document.getElementById('waiting-area').style.display = 'none';
+                document.getElementById('poll-view').style.display = 'flex';
+                // Kullanıcı butonlarını çiz (Eğer daha önce oy vermediyse)
+                if(!document.querySelector('#poll-view h2').innerText.includes("Kaydedildi")) {
+                    document.getElementById('poll-options-list').innerHTML = db.activePoll.options.map(o => 
+                        `<div class="poll-card" onclick="castVote('${o.id}')">${o.name}</div>`).join('');
+                }
             } else {
-                document.getElementById('btn-create-poll').innerHTML = `Oylama Oluştur <i class="fas fa-poll-h"></i>`;
                 document.getElementById('poll-view').style.display = 'none';
                 document.getElementById('waiting-area').style.display = 'block';
             }
         }
 
-        function renderResults() {
-            const cont = document.getElementById('results-cont');
-            if(!db.activePoll || !db.activePoll.options) { 
-                cont.innerHTML = "<p style='text-align:center;'>Aktif oylama yok.</p>"; 
-                return; 
-            }
-            
-            // Toplam oyu sayısal güvenlikle hesapla
-            const total = db.activePoll.options.reduce((a, b) => a + (Number(b.votes) || 0), 0);
-            
-            let html = `<div style="text-align:center; color:var(--success); margin-bottom:15px; font-weight:bold;">Toplam: ${total} Oy</div>`;
-            
-            html += db.activePoll.options.map(opt => {
-                const votes = Number(opt.votes) || 0;
-                const perc = total > 0 ? Math.round((votes / total) * 100) : 0;
-                return `
-                    <div class="res-row">
-                        <div class="res-label"><span>${opt.name}</span><span>${votes} Oy (%${perc})</span></div>
-                        <div class="res-bar-bg"><div class="res-bar-fill" style="width:${perc}%"></div></div>
-                    </div>`;
-            }).join('');
-            
-            cont.innerHTML = html;
+        // Admin Yardımcı Fonksiyonları
+        function openPage(id) {
+            document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            if(id === 'p-results') renderResults();
+            renderAll();
         }
 
-        function finishPoll() { 
-            db.activePoll = null; 
-            socket.emit('db_update', db); 
-            openPage('p-main'); 
-            updateUIState(); 
-        }
-
-        function renderAll() {
-            document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
-                const songs = db.songs.filter(s => s.catId == c.id);
-                return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button><div class="cat-songs">${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}</div></div>`;
-            }).join('');
-            document.getElementById('song-list-cont').innerHTML = db.songs.map(s => {
-                let opts = db.categories.map(c => `<option value="${c.id}" ${s.catId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
-                return `<div class="list-item"><span style="flex:1">${s.name}</span><select onchange="assignToCat(${s.id}, this.value)" style="background:#0f172a; color:white;"><option value="">-</option>${opts}</select></div>`;
-            }).join('');
-            document.getElementById('poll-selection-cont').innerHTML = db.categories.map(c => {
-                const songs = db.songs.filter(s => s.catId == c.id);
-                return songs.length ? `<div class="cat-box"><div class="cat-btn">${c.name}</div><div class="cat-songs active">${songs.map(s => `<div class="list-item"><span>${s.name}</span><input type="checkbox" class="poll-checkbox" value="${s.id}" data-name="${s.name}"></div>`).join('')}</div></div>` : '';
-            }).join('');
-        }
-
-        function align(l, t) { tempAligns[l] = t; }
-        function pubWait() { socket.emit('bekleme_mesaji_degistir', { line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value, line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value }); }
-        function assignToCat(sId, cId) { db.songs.find(x => x.id == sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); renderAll(); }
-
-        function showPollToUser(poll) {
-            document.getElementById('waiting-area').style.display = 'none';
-            const pollView = document.getElementById('poll-view');
-            pollView.style.display = 'flex';
-            document.getElementById('poll-options-list').innerHTML = poll.options.map(opt => `<div class="poll-card" onclick="castVote('${opt.id}')">${opt.name}</div>`).join('');
-        }
-        function castVote(sId) { socket.emit('submit_vote', sId); document.getElementById('poll-view').innerHTML = `<h2>Oyun Alındı!</h2>`; }
         function sendPoll() {
-            const sel = Array.from(document.querySelectorAll('.poll-checkbox:checked')).map(cb => ({ id: cb.value, name: cb.getAttribute('data-name'), votes: 0 }));
-            if(sel.length < 2) return alert("En az 2 şarkı!");
-            db.activePoll = { options: sel, id: Date.now() };
-            socket.emit('db_update', db); 
-            socket.emit('start_poll', db.activePoll);
-            openPage('p-main'); 
-            updateUIState();
+            const sel = Array.from(document.querySelectorAll('.poll-checkbox:checked')).map(cb => ({
+                id: cb.value.toString(), // ID'yi stringe zorla
+                name: cb.getAttribute('data-name'),
+                votes: 0
+            }));
+            if(sel.length < 2) return alert("En az 2 şarkı seç!");
+            const newPoll = { id: Date.now().toString(), options: sel };
+            socket.emit('start_poll', newPoll);
+            openPage('p-main');
         }
 
-        function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStart()">BAŞLAT</button>`); }
-        function confirmStart() {
-            db.sceneActive = true; 
-            socket.emit('db_update', db); 
-            updateUIState(); 
-            closeDrawer();
-            socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'MÜZİĞİN KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'});
-        }
-
-        function askEndScene() { openDrawer(`<h4>Sahne Bitir?</h4><input type="password" id="end-pw" class="admin-input"><button class="action-btn" style="background:var(--danger)" onclick="confirmEnd()">BİTİR</button>`); }
-        function confirmEnd() {
-            if(document.getElementById('end-pw').value === '1167') {
-                db.sceneActive = false; db.activePoll = null;
-                socket.emit('db_update', db);
-                socket.emit('bekleme_mesaji_degistir', db.lastManual || {line1:"", line2:""});
-                closeDrawer(); 
-                setTimeout(() => location.reload(), 500);
-            }
-        }
-
-        function showAuthDrawer() { openDrawer(`<h4>Giriş</h4><input type="password" id="admin-pw" class="admin-input"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); }
-        function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; } }
-        function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
+        function finishPoll() { socket.emit('finish_poll'); openPage('p-main'); }
+        function askStartScene() { openDrawer(`<h4>Sahne Başlasın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStart()">EVET</button>`); }
+        function confirmStart() { db.sceneActive = true; socket.emit('db_update', db); closeDrawer(); updateUIState(); }
+        function askEndScene() { openDrawer(`<h4>Bitir?</h4><input type="password" id="pw" class="admin-input"><button class="action-btn" style="background:var(--danger)" onclick="confirmEnd()">BİTİR</button>`); }
+        function confirmEnd() { if(document.getElementById('pw').value==='1167'){ db.sceneActive=false; db.activePoll=null; socket.emit('db_update',db); closeDrawer(); location.reload(); }}
+        function showAuthDrawer() { openDrawer(`<h4>Admin</h4><input type="password" id="apw" class="admin-input"><button class="action-btn" onclick="checkAuth()">GİRİŞ</button>`); }
+        function checkAuth() { if(document.getElementById('apw').value==="1167"){ closeDrawer(); document.getElementById('admin-portal').style.display='block'; }}
+        function openDrawer(h) { document.getElementById('drawer-content').innerHTML=h; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
-        
-        function openPage(id) { 
-            document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); 
-            document.getElementById(id).classList.add('active'); 
-            if(id === 'p-results') renderResults(); 
-            renderAll(); 
-        }
-        
-        function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
+        function renderAll() { /* Repertuar ve kategori listeleme kodları buraya gelecek */ }
+        function align(l,a) { tempAligns[l]=a; }
+        function pubWait() { socket.emit('bekleme_mesaji_degistir', { line1: document.getElementById('i1').value, align1: tempAligns[1], line2: document.getElementById('i2').value, align2: tempAligns[2] }); }
+        function closeAdminPanel() { document.getElementById('admin-portal').style.display='none'; }
     </script>
 </body>
 </html>
