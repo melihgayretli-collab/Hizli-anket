@@ -151,9 +151,21 @@
         let db = { categories: [], songs: [], sceneActive: false, lastManual: null, activePoll: null };
         let tempAligns = { 1: 'center', 2: 'center' };
 
-        socket.on('init_data', d => { db = d; renderAll(); updateUIState(); });
+        socket.on('init_data', d => { 
+            db = d; 
+            renderAll(); 
+            updateUIState(); 
+        });
 
-        socket.on('start_poll', pollData => { db.activePoll = pollData; showPollToUser(pollData); });
+        socket.on('start_poll', pollData => { 
+            db.activePoll = pollData; 
+            updateUIState(); 
+        });
+
+        socket.on('poll_update', pollData => {
+            db.activePoll = pollData;
+            updateUIState();
+        });
 
         socket.on('bekleme_mesaji_guncelle', d => {
             const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
@@ -172,6 +184,7 @@
             document.getElementById('btn-close-panel').style.visibility = isLive ? 'hidden' : 'visible';
             
             document.getElementById('btn-create-poll').disabled = hasPoll;
+            
             if(hasPoll) {
                 document.getElementById('btn-create-poll').innerHTML = `Anket Yayında <i class="fas fa-spinner fa-spin"></i>`;
                 showPollToUser(db.activePoll);
@@ -219,6 +232,7 @@
 
         // --- Sahne ve Anket Fonksiyonları ---
         function showPollToUser(poll) {
+            if(!poll) return;
             document.getElementById('waiting-area').style.display = 'none';
             const pollView = document.getElementById('poll-view');
             pollView.style.display = 'flex';
