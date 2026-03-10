@@ -32,6 +32,12 @@
         .admin-main-btn { background: var(--input-bg); border: 1px solid #374151; color: white; padding: 18px 20px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; font-size: 1.1rem; width: 100%; margin-bottom: 12px; min-height: 65px; }
         .admin-main-btn:disabled { opacity: 0.5; filter: grayscale(1); cursor: not-allowed; }
 
+        /* Sonuç Bar Stilleri */
+        .res-row { margin-bottom: 15px; }
+        .res-bar-bg { background: #374151; height: 20px; border-radius: 10px; margin-top: 5px; overflow: hidden; position: relative; }
+        .res-bar-fill { background: var(--primary); height: 100%; transition: 0.5s; width: 0%; }
+        .res-label { display: flex; justify-content: space-between; font-size: 0.9rem; }
+
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s; border-top: 3px solid var(--primary); }
         .drawer.active { bottom: 0; }
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
@@ -82,7 +88,7 @@
                 <button id="btn-create-poll" class="admin-main-btn" onclick="openPage('p-poll-create')" style="background: var(--primary);">
                     Oylama Oluştur <i class="fas fa-poll-h"></i>
                 </button>
-                <button class="admin-main-btn" onclick="alert('Yakında!')" style="background: var(--primary);">
+                <button id="btn-results" class="admin-main-btn" onclick="openPage('p-results')" style="background: var(--primary);">
                     Sonuç İzle <i class="fas fa-chart-line"></i>
                 </button>
                 <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger); margin-top: 10px;">
@@ -99,6 +105,13 @@
                 </button>
             </div>
             <button id="btn-close-panel" class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
+        </div>
+
+        <div id="p-results" class="admin-page">
+            <h3>Canlı Oylama Sonuçları</h3>
+            <div id="results-cont" style="margin-top:20px;"></div>
+            <button class="action-btn" style="background:var(--danger); margin-top:30px;" onclick="finishPoll()">OYLAMAYI BİTİR</button>
+            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
         </div>
 
         <div id="p-waiting" class="admin-page">
@@ -148,7 +161,7 @@
 
     <script>
         const socket = io();
-        let db = { categories: [], songs: [], sceneActive: false, lastManual: null, activePoll: null };
+        let db = { categories: [], songs: [], sceneActive: false, lastManual: {line1:"", align1:"center", size1:"1.5rem", line2:"", align2:"center", size2:"1.5rem"}, activePoll: null };
         let tempAligns = { 1: 'center', 2: 'center' };
 
         socket.on('init_data', d => { 
@@ -164,6 +177,7 @@
 
         socket.on('poll_update', pollData => {
             db.activePoll = pollData;
+            if(document.getElementById('p-results').classList.contains('active')) renderResults();
             updateUIState();
         });
 
@@ -171,6 +185,7 @@
             const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
             v1.innerText = d.line1; v1.style.textAlign = d.align1; v1.style.fontSize = d.size1;
             v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
+            // Sahne aktif değilse, bu manuel bir ayardır, kaydet.
             if(!db.sceneActive) db.lastManual = d;
         });
 
@@ -184,6 +199,7 @@
             document.getElementById('btn-close-panel').style.visibility = isLive ? 'hidden' : 'visible';
             
             document.getElementById('btn-create-poll').disabled = hasPoll;
+            document.getElementById('btn-results').disabled = !hasPoll;
             
             if(hasPoll) {
                 document.getElementById('btn-create-poll').innerHTML = `Anket Yayında <i class="fas fa-spinner fa-spin"></i>`;
@@ -195,8 +211,29 @@
             }
         }
 
+        function renderResults() {
+            const cont = document.getElementById('results-cont');
+            if(!db.activePoll) { cont.innerHTML = "Aktif oylama yok."; return; }
+            
+            const total = db.activePoll.options.reduce((a, b) => a + (b.votes || 0), 0);
+            cont.innerHTML = db.activePoll.options.map(opt => {
+                const perc = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
+                return `
+                    <div class="res-row">
+                        <div class="res-label"><span>${opt.name}</span><span>${opt.votes || 0} Oy (%${perc})</span></div>
+                        <div class="res-bar-bg"><div class="res-bar-fill" style="width:${perc}%"></div></div>
+                    </div>`;
+            }).join('');
+        }
+
+        function finishPoll() {
+            db.activePoll = null;
+            socket.emit('db_update', db);
+            openPage('p-main');
+            updateUIState();
+        }
+
         function renderAll() {
-            // REPERTUAR YÖNETİMİ RENDERING
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
                 return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button><div class="cat-songs"><div style="display:flex; gap:10px; margin-bottom:10px;"><button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button><button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button></div>${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}</div></div>`;
@@ -207,7 +244,6 @@
                 return `<div class="list-item"><span style="flex:1">${s.name}</span><select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)"><option value="">-</option>${opts}</select><i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i></div>`;
             }).join('');
 
-            // ANKET SEÇİM LİSTESİ RENDERING
             document.getElementById('poll-selection-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
                 if(songs.length === 0) return '';
@@ -215,11 +251,9 @@
             }).join('');
         }
 
-        // --- Bekleme Ekranı Fonksiyonları ---
         function align(l, t) { tempAligns[l] = t; document.getElementById(`t${l}`).querySelectorAll('i').forEach(i => i.style.color = i.classList.contains(`fa-align-${t}`) ? 'var(--success)' : '#9ca3af'); }
         function pubWait() { socket.emit('bekleme_mesaji_degistir', { line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value, line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value }); }
 
-        // --- Repertuar Fonksiyonları ---
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
         function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); renderAll(); } }
         function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
@@ -230,7 +264,6 @@
         function showAddSongToCatDrawer(catId) { const freeSongs = db.songs.filter(s => !s.catId); let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`; html += freeSongs.length === 0 ? `<p style="text-align:center; color:#9ca3af;">Boşta şarkı yok.</p>` : freeSongs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i></div>`).join(''); openDrawer(html + `</div>`); }
         function assignToCat(sId, cId) { db.songs.find(x => x.id == sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); closeDrawer(); renderAll(); }
 
-        // --- Sahne ve Anket Fonksiyonları ---
         function showPollToUser(poll) {
             if(!poll) return;
             document.getElementById('waiting-area').style.display = 'none';
@@ -248,15 +281,38 @@
             openPage('p-main');
             updateUIState();
         }
-        function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="db.sceneActive=true;socket.emit('db_update',db);updateUIState();closeDrawer();socket.emit('bekleme_mesaji_degistir',{line1:'SIRADAKİ OYLAMAYA KADAR',align1:'center',size1:'1.5rem',line2:'KEYFİNİ ÇIKAR',align2:'center',size2:'1.5rem'});">BAŞLAT</button>`); }
-        function askEndScene() { openDrawer(`<h4>Sahne Bitir?</h4><input type="password" id="end-pw" class="admin-input"><button class="action-btn" style="background:var(--danger)" onclick="if(document.getElementById('end-pw').value==='1167'){db.sceneActive=false;db.activePoll=null;socket.emit('db_update',db);location.reload();}">BİTİR</button>`); }
 
-        // --- Panel Genel Fonksiyonlar ---
+        function askStartScene() { 
+            openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">BAŞLAT</button>`); 
+        }
+        function confirmStartScene() {
+            db.sceneActive = true;
+            socket.emit('db_update', db);
+            updateUIState();
+            closeDrawer();
+            socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'});
+        }
+
+        function askEndScene() { 
+            openDrawer(`<h4>Sahne Bitir?</h4><input type="password" id="end-pw" class="admin-input"><button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">BİTİR</button>`); 
+        }
+        function confirmEndScene() {
+            if(document.getElementById('end-pw').value === '1167') {
+                db.sceneActive = false;
+                db.activePoll = null;
+                socket.emit('db_update', db);
+                // Sahne bitince, en son kaydedilen manuel bekleme metnine geri dön.
+                socket.emit('bekleme_mesaji_degistir', db.lastManual || {line1:"", line2:""});
+                closeDrawer();
+                setTimeout(() => location.reload(), 500);
+            }
+        }
+
         function showAuthDrawer() { openDrawer(`<h4>Giriş</h4><input type="password" id="admin-pw" class="admin-input"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); }
         function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; } else { alert("Hatalı!"); } }
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
-        function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); renderAll(); }
+        function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id === 'p-results') renderResults(); renderAll(); }
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
     </script>
 </body>
