@@ -51,7 +51,6 @@
         .cat-songs { display: none; padding: 10px; background: rgba(0,0,0,0.2); border-top: 1px solid #374151; }
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .line-tools { display: flex; gap: 15px; align-items: center; color: #9ca3af; margin-top: 5px; }
         .poll-checkbox { width: 22px; height: 22px; cursor: pointer; accent-color: var(--success); }
         #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.8rem; }
     </style>
@@ -155,7 +154,10 @@
 
         socket.on('poll_update', pollData => {
             db.activePoll = pollData;
-            if(document.getElementById('p-results').classList.contains('active')) renderResults();
+            // Eğer admin sonuç sayfasındaysa barları anlık güncelle
+            if(document.getElementById('p-results').classList.contains('active')) {
+                renderResults();
+            }
             updateUIState();
         });
 
@@ -189,17 +191,35 @@
 
         function renderResults() {
             const cont = document.getElementById('results-cont');
-            if(!db.activePoll) { cont.innerHTML = "Aktif oylama yok."; return; }
-            const total = db.activePoll.options.reduce((a, b) => a + (b.votes || 0), 0);
-            cont.innerHTML = `<div style="text-align:center; color:var(--success); margin-bottom:15px;">Toplam: ${total} Oy</div>` + 
-                db.activePoll.options.map(opt => {
-                    const votes = opt.votes || 0;
-                    const perc = total > 0 ? Math.round((votes / total) * 100) : 0;
-                    return `<div class="res-row"><div class="res-label"><span>${opt.name}</span><span>${votes} Oy (%${perc})</span></div><div class="res-bar-bg"><div class="res-bar-fill" style="width:${perc}%"></div></div></div>`;
-                }).join('');
+            if(!db.activePoll || !db.activePoll.options) { 
+                cont.innerHTML = "<p style='text-align:center;'>Aktif oylama yok.</p>"; 
+                return; 
+            }
+            
+            // Toplam oyu sayısal güvenlikle hesapla
+            const total = db.activePoll.options.reduce((a, b) => a + (Number(b.votes) || 0), 0);
+            
+            let html = `<div style="text-align:center; color:var(--success); margin-bottom:15px; font-weight:bold;">Toplam: ${total} Oy</div>`;
+            
+            html += db.activePoll.options.map(opt => {
+                const votes = Number(opt.votes) || 0;
+                const perc = total > 0 ? Math.round((votes / total) * 100) : 0;
+                return `
+                    <div class="res-row">
+                        <div class="res-label"><span>${opt.name}</span><span>${votes} Oy (%${perc})</span></div>
+                        <div class="res-bar-bg"><div class="res-bar-fill" style="width:${perc}%"></div></div>
+                    </div>`;
+            }).join('');
+            
+            cont.innerHTML = html;
         }
 
-        function finishPoll() { db.activePoll = null; socket.emit('db_update', db); openPage('p-main'); updateUIState(); }
+        function finishPoll() { 
+            db.activePoll = null; 
+            socket.emit('db_update', db); 
+            openPage('p-main'); 
+            updateUIState(); 
+        }
 
         function renderAll() {
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
@@ -231,13 +251,18 @@
             const sel = Array.from(document.querySelectorAll('.poll-checkbox:checked')).map(cb => ({ id: cb.value, name: cb.getAttribute('data-name'), votes: 0 }));
             if(sel.length < 2) return alert("En az 2 şarkı!");
             db.activePoll = { options: sel, id: Date.now() };
-            socket.emit('db_update', db); socket.emit('start_poll', db.activePoll);
-            openPage('p-main'); updateUIState();
+            socket.emit('db_update', db); 
+            socket.emit('start_poll', db.activePoll);
+            openPage('p-main'); 
+            updateUIState();
         }
 
         function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStart()">BAŞLAT</button>`); }
         function confirmStart() {
-            db.sceneActive = true; socket.emit('db_update', db); updateUIState(); closeDrawer();
+            db.sceneActive = true; 
+            socket.emit('db_update', db); 
+            updateUIState(); 
+            closeDrawer();
             socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'MÜZİĞİN KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'});
         }
 
@@ -247,7 +272,8 @@
                 db.sceneActive = false; db.activePoll = null;
                 socket.emit('db_update', db);
                 socket.emit('bekleme_mesaji_degistir', db.lastManual || {line1:"", line2:""});
-                closeDrawer(); setTimeout(() => location.reload(), 500);
+                closeDrawer(); 
+                setTimeout(() => location.reload(), 500);
             }
         }
 
@@ -255,7 +281,14 @@
         function checkAuth() { if(document.getElementById('admin-pw').value === "1167") { closeDrawer(); document.getElementById('admin-portal').style.display = 'block'; } }
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
-        function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id === 'p-results') renderResults(); renderAll(); }
+        
+        function openPage(id) { 
+            document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); 
+            document.getElementById(id).classList.add('active'); 
+            if(id === 'p-results') renderResults(); 
+            renderAll(); 
+        }
+        
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
     </script>
 </body>
