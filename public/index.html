@@ -31,10 +31,23 @@
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
         .drawer-overlay.active { display: block; }
 
+        /* Mobil Uyumlu Buton Düzenlemesi */
         .admin-main-btn { 
-            background: var(--input-bg); border: 1px solid #374151; color: white; padding: 18px 20px; 
-            border-radius: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; 
-            text-decoration: none; font-size: 1.1rem; width: 100%; margin-bottom: 12px; box-sizing: border-box; min-height: 65px;
+            background: var(--input-bg); 
+            border: 1px solid #374151; 
+            color: white; 
+            padding: 18px 20px; 
+            border-radius: 12px; 
+            cursor: pointer; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            text-decoration: none; 
+            font-size: 1.1rem; 
+            width: 100%; 
+            margin-bottom: 12px; 
+            box-sizing: border-box;
+            min-height: 65px;
         }
         
         .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
@@ -74,10 +87,10 @@
                 <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger);">
                     Sahne Bitir <i class="fas fa-stop"></i>
                 </button>
-                <button class="admin-main-btn" onclick="alert('Oylama oluşturma yakında!')">
+                <button class="admin-main-btn" onclick="alert('Anket modülü yakında!')">
                     Oylama Oluştur <i class="fas fa-poll-h"></i>
                 </button>
-                <button class="admin-main-btn" onclick="alert('Sonuç izleme yakında!')">
+                <button class="admin-main-btn" onclick="alert('Sonuç ekranı yakında!')">
                     Sonuç İzle <i class="fas fa-chart-line"></i>
                 </button>
             </div>
@@ -150,7 +163,6 @@
                 v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
                 [v1, v2].forEach(el => { el.classList.remove('fade-out'); el.classList.add('fade-in'); });
                 curScene = d;
-                // Sahne kapalıyken gönderilen son manuel mesajı hafızada tut
                 if(!isSceneLive) lastManualMsg = {...d};
                 updatePanelInputs();
             }, 500);
@@ -158,7 +170,6 @@
 
         function updateSceneUI(status) {
             isSceneLive = status;
-            // Buton görünürlükleri
             document.getElementById('btn-start-scene').style.display = status ? 'none' : 'flex';
             document.getElementById('standard-menu').style.display = status ? 'none' : 'block';
             document.getElementById('active-scene-controls').style.display = status ? 'flex' : 'none';
@@ -168,7 +179,6 @@
         function askStartScene() {
             openDrawer(`
                 <h3 style="color:var(--success)">Sahne Başlatılsın mı?</h3>
-                <p>Ekranda otomatik mesaj yayınlanacaktır.</p>
                 <button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">EVET, BAŞLAT</button>
                 <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="closeDrawer()">İPTAL</button>
             `);
@@ -176,7 +186,6 @@
 
         function confirmStartScene() {
             socket.emit('sahne_durumu_degistir', true);
-            // Talimat gereği otomatik mesajı basıyoruz
             socket.emit('bekleme_mesaji_degistir', {
                 line1: "BİR SONRAKİ OYLAMAYA KADAR",
                 line2: "MÜZİĞİN KEYFİNİ ÇIKAR",
@@ -188,7 +197,6 @@
         function askEndScene() {
             openDrawer(`
                 <h4 style="color:var(--danger)">Sahneyi Bitir</h4>
-                <p>Şifre doğrulama gereklidir.</p>
                 <input type="password" id="end-pw" class="admin-input" placeholder="Şifre Giriniz">
                 <button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">SAHNEYİ KAPAT</button>
             `);
@@ -198,10 +206,9 @@
         function confirmEndScene() {
             if(document.getElementById('end-pw').value === "1167") {
                 socket.emit('sahne_durumu_degistir', false);
-                // Sahne bitince, sahne başlamadan önceki manuel mesajı geri yükle
                 if(lastManualMsg) socket.emit('bekleme_mesaji_degistir', lastManualMsg);
                 closeDrawer();
-            } else { alert("Hatalı Şifre!"); }
+            } else { alert("Hatalı!"); }
         }
 
         function updatePanelInputs() {
@@ -227,10 +234,8 @@
                 line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value
             };
             socket.emit('bekleme_mesaji_degistir', data);
-            // Eğer sahne kapalıyken manuel yayın yapılıyorsa bunu yedekle
             if(!isSceneLive) lastManualMsg = data;
             openDrawer(`<h4 style="color:var(--success); text-align:center;">Yayınlandı</h4>`);
-            setTimeout(closeDrawer, 1000);
         }
 
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
