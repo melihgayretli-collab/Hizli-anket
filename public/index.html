@@ -21,7 +21,6 @@
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
         
-        /* Android / Mobil Buton Sabitleme */
         .admin-main-btn { 
             background: var(--input-bg); 
             border: 1px solid #374151; 
@@ -38,7 +37,6 @@
             margin-bottom: 12px; 
             box-sizing: border-box;
             min-height: 65px;
-            flex-shrink: 0;
         }
 
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-top: 3px solid var(--primary); }
@@ -46,7 +44,7 @@
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
         .drawer-overlay.active { display: block; }
 
-        .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; flex-shrink: 0; }
+        .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
         .admin-input { background: #0f172a; border: 1px solid #374151; color: white; padding: 14px; border-radius: 8px; width: 100%; box-sizing: border-box; outline: none; margin-bottom: 10px; }
         
         .cat-box { background: var(--input-bg); border: 1px solid #374151; border-radius: 10px; margin-bottom: 12px; }
@@ -86,7 +84,7 @@
                 </button>
             </div>
 
-            <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="document.getElementById('admin-portal').style.display='none'">PANELİ KAPAT</button>
+            <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
         </div>
 
         <div id="p-repertuar" class="admin-page">
@@ -109,6 +107,16 @@
             <div id="song-list-cont" style="margin-top:10px;"></div>
             <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-repertuar')">GERİ</button>
         </div>
+
+        <div id="p-waiting" class="admin-page">
+            <h3>Bekleme Ekranı Düzenle</h3>
+            <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:12px;">
+                <input type="text" id="i1" class="admin-input" placeholder="Satır 1">
+                <input type="text" id="i2" class="admin-input" placeholder="Satır 2">
+            </div>
+            <button class="action-btn" style="background:var(--success); margin-bottom:10px;" onclick="alert('Yayınlandı')">YAYINLA</button>
+            <button class="action-btn" style="background:var(--input-bg);" onclick="openPage('p-main')">GERİ</button>
+        </div>
     </div>
 
     <script>
@@ -117,73 +125,95 @@
 
         socket.on('init_data', d => { db = d; renderAll(); });
 
-        function showAuthDrawer() { 
-            openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); 
-            setTimeout(() => document.getElementById('admin-pw').focus(), 200);
-        }
-
-        function checkAuth() {
-            if(document.getElementById('admin-pw').value === "1167") {
-                closeDrawer();
-                document.getElementById('admin-portal').style.display = 'block';
-            } else { alert("Hatalı Şifre!"); }
-        }
-
         function renderAll() {
-            // Kategoriler
+            // Kategori Listesi
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
-                return `<div class="cat-box">
-                    <button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button>
+                return `
+                <div class="cat-box">
+                    <button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">
+                        ${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i>
+                    </button>
                     <div class="cat-songs">
-                        <button class="action-btn" style="background:var(--primary); font-size:0.8rem; margin-bottom:10px;" onclick="showAddSongToCatDrawer(${c.id})">Boştaki Şarkıları Ekle</button>
-                        ${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="updateSongCat(${s.id}, null)"></i></div>`).join('')}
+                        <div style="display:flex; gap:10px; margin-bottom:10px;">
+                            <button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button>
+                            <button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button>
+                        </div>
+                        ${songs.map(s => `
+                            <div class="list-item">
+                                <span>${s.name}</span>
+                                <i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>`;
             }).join('');
 
-            // Tüm Şarkılar
-            document.getElementById('song-list-cont').innerHTML = db.songs.map(s => `
+            // Şarkı Listesi (Geri Gelen Select Yapısı)
+            document.getElementById('song-list-cont').innerHTML = db.songs.map(s => {
+                let opts = db.categories.map(c => `<option value="${c.id}" ${s.catId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
+                return `
                 <div class="list-item">
-                    <span>${s.name} ${s.catId ? '<small style="color:#6b7280">(Dolu)</small>' : '<small style="color:var(--success)">(Boşta)</small>'}</span>
-                    <i class="fas fa-trash" style="color:var(--danger); cursor:pointer;" onclick="askDelSong(${s.id})"></i>
-                </div>
-            `).join('');
+                    <span style="flex:1">${s.name}</span>
+                    <select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)">
+                        <option value="">-</option>
+                        ${opts}
+                    </select>
+                    <i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i>
+                </div>`;
+            }).join('');
         }
 
+        // BOŞTA OLMA ŞARTI: Sadece catId'si olmayan şarkılar listelenir
         function showAddSongToCatDrawer(catId) {
             const freeSongs = db.songs.filter(s => !s.catId);
             let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`;
             if(freeSongs.length === 0) {
-                html += `<p style="text-align:center; color:#9ca3af;">Atanacak boşta şarkı yok.</p>`;
+                html += `<p style="text-align:center; padding:20px; color:#9ca3af;">Atanacak boşta şarkı yok.</p>`;
             } else {
-                html += freeSongs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="updateSongCat(${s.id}, ${catId})"></i></div>`).join('');
+                html += freeSongs.map(s => `
+                    <div class="list-item">
+                        <span>${s.name}</span>
+                        <i class="fas fa-plus-circle" style="color:var(--success); cursor:pointer;" onclick="assignToCat(${s.id}, ${catId})"></i>
+                    </div>`).join('');
             }
             html += `</div>`;
             openDrawer(html);
         }
 
-        function updateSongCat(sId, cId) {
+        function assignToCat(sId, cId) {
             const song = db.songs.find(x => x.id == sId);
             if(song) {
-                song.catId = cId;
+                song.catId = cId ? parseInt(cId) : null;
                 socket.emit('db_update', db);
                 closeDrawer();
             }
         }
 
-        function askStartScene() {
-            openDrawer(`<h4>Sahne Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET, BAŞLAT</button>`);
+        // Yönetici Girişi
+        function showAuthDrawer() { 
+            openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); 
+        }
+        function checkAuth() {
+            if(document.getElementById('admin-pw').value === "1167") {
+                closeDrawer();
+                document.getElementById('admin-portal').style.display = 'block';
+            } else { alert("Hatalı!"); }
         }
 
+        // Diğer Fonksiyonlar
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
-        function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
-        function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); } }
+        function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
+        function askStartScene() { openDrawer(`<h4>Sahne Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET</button>`); }
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
         function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); } }
-        function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();">EVET, SİL</button>`); }
+        function askDelCat(id, name) { openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="confirmDelCat(${id})">SİL</button>`); }
+        function confirmDelCat(id) { db.categories = db.categories.filter(c => c.id !== id); db.songs.forEach(s => { if(s.catId == id) s.catId = null; }); socket.emit('db_update', db); closeDrawer(); }
+        function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
+        function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); } }
+        function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
     </script>
 </body>
 </html>
