@@ -7,20 +7,15 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        :root {
-            --primary: #4f46e5; --danger: #ef4444; --success: #10b981; --dark: #0f172a;
-            --panel-bg: #111827; --input-bg: #1f2937;
-        }
+        :root { --primary: #4f46e5; --danger: #ef4444; --success: #10b981; --dark: #0f172a; --panel-bg: #111827; --input-bg: #1f2937; }
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background: #000 url('image1.png') no-repeat center center fixed; background-size: cover; color: white; height: 100vh; overflow: hidden; }
         .overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.6); z-index: 1; }
         .content { position: relative; z-index: 10; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; box-sizing: border-box; }
         .waiting-line { transition: 0.5s; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); width: 100%; }
-        
         #poll-view { display: none; width: 100%; max-width: 400px; flex-direction: column; gap: 15px; }
         .poll-card { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 18px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; transition: 0.3s; position: relative; overflow: hidden; }
         .progress-bar { position: absolute; left: 0; top: 0; height: 100%; background: rgba(79, 70, 229, 0.4); transition: width 0.5s ease; z-index: 0; }
         .poll-text { position: relative; z-index: 1; font-size: 1.1rem; font-weight: bold; display: flex; justify-content: space-between; width: 100%; }
-
         #admin-portal { display: none; position: fixed; inset: 0; background: var(--panel-bg); z-index: 1000; padding: 20px; overflow-y: auto; }
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
@@ -31,13 +26,12 @@
         .drawer-overlay.active { display: block; }
         .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; }
         .admin-input { background: #0f172a; border: 1px solid #374151; color: white; padding: 14px; border-radius: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-        .cat-box { background: var(--input-bg); border: 1px solid #374151; border-radius: 10px; margin-bottom: 12px; }
-        .cat-btn { width: 100%; padding: 15px; background: none; border: none; color: white; text-align: left; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; }
+        .cat-box { background: var(--input-bg); border: 1px solid #374151; border-radius: 10px; margin-bottom: 12px; overflow: hidden; }
+        .cat-btn { width: 100%; padding: 15px; background: none; border: none; color: white; text-align: left; font-weight: bold; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
         .cat-songs { display: none; padding: 10px; background: rgba(0,0,0,0.2); border-top: 1px solid #374151; }
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .line-tools { display: flex; gap: 15px; align-items: center; color: #9ca3af; margin-top: 5px; }
-        #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; font-size: 1.8rem; }
+        @keyframes blinker { from { opacity: 1; } to { opacity: 0; } }
     </style>
 </head>
 <body>
@@ -55,7 +49,7 @@
         </div>
     </div>
 
-    <button id="admin-trigger" onclick="showAuthDrawer()"><i class="fas fa-cog"></i></button>
+    <button id="admin-trigger" onclick="showAuthDrawer()" style="position:fixed; top:15px; right:15px; z-index:100; opacity:0.1; background:none; border:none; color:white; font-size:1.8rem;"><i class="fas fa-cog"></i></button>
     <div id="drawer-bg" class="drawer-overlay" onclick="closeDrawer()"></div>
     <div id="main-drawer" class="drawer"><div id="drawer-content"></div></div>
 
@@ -63,11 +57,13 @@
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center;">Sahne Yönetimi</h3>
             <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
+            
             <div id="active-scene-controls" style="display:none; flex-direction:column;">
                 <button id="btn-create-poll" class="admin-main-btn" onclick="openPage('p-poll-create')" style="background: var(--primary);">Oylama Oluştur <i class="fas fa-poll-h"></i></button>
                 <button id="btn-view-results" class="admin-main-btn" onclick="openPage('p-poll-results')" style="background: var(--primary);">Sonuç İzle <i class="fas fa-chart-line"></i></button>
                 <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger); margin-top: 10px;">Sahne Bitir <i class="fas fa-stop"></i></button>
             </div>
+
             <div id="standard-menu">
                 <button class="admin-main-btn" onclick="openPage('p-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
                 <button class="admin-main-btn" onclick="openPage('p-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
@@ -77,44 +73,56 @@
 
         <div id="p-repertuar" class="admin-page">
             <h3>Repertuar Yönetimi</h3>
-            <button class="admin-main-btn" onclick="openPage('p-cats')">Kategoriler</button>
-            <button class="admin-main-btn" onclick="openPage('p-songs')">Şarkılar</button>
+            <button class="admin-main-btn" onclick="openPage('p-cats')">Kategoriler <i class="fas fa-list"></i></button>
+            <button class="admin-main-btn" onclick="openPage('p-songs')">Şarkı Listesi <i class="fas fa-microphone"></i></button>
             <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
         </div>
+
         <div id="p-cats" class="admin-page">
-            <h3>Kategoriler</h3><div id="cat-list-cont"></div><button class="action-btn" onclick="openPage('p-repertuar')">GERİ</button>
+            <h3>Kategoriler</h3>
+            <button class="admin-main-btn" onclick="showNewCatDrawer()" style="background:var(--success);">Yeni Kategori Ekle <i class="fas fa-plus"></i></button>
+            <div id="cat-list-cont" style="margin-top:10px;"></div>
+            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-repertuar')">GERİ</button>
         </div>
+
         <div id="p-songs" class="admin-page">
-            <h3>Şarkılar</h3><div id="song-list-cont"></div><button class="action-btn" onclick="openPage('p-repertuar')">GERİ</button>
+            <h3>Tüm Şarkılar</h3>
+            <button class="admin-main-btn" onclick="showNewSongDrawer()" style="background:var(--success);">Yeni Şarkı Ekle <i class="fas fa-plus"></i></button>
+            <div id="song-list-cont" style="margin-top:10px;"></div>
+            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-repertuar')">GERİ</button>
         </div>
+
         <div id="p-waiting" class="admin-page">
             <h3>Bekleme Ekranı Düzenle</h3>
-            <input type="text" id="i1" class="admin-input" placeholder="Satır 1">
-            <div class="line-tools" id="t1">
-                <i class="fas fa-align-left" onclick="align(1,'left')"></i><i class="fas fa-align-center" onclick="align(1,'center')"></i><i class="fas fa-align-right" onclick="align(1,'right')"></i>
-                <select id="s1"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
+            <div style="background:var(--input-bg); padding:15px; border-radius:12px; margin-bottom:10px;">
+                <input type="text" id="i1" class="admin-input" placeholder="Satır 1">
+                <div style="display:flex; justify-content:space-around; color:#9ca3af;">
+                    <i class="fas fa-align-left" onclick="align(1,'left')"></i><i class="fas fa-align-center" onclick="align(1,'center')"></i><i class="fas fa-align-right" onclick="align(1,'right')"></i>
+                    <select id="s1"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
+                </div>
             </div>
-            <input type="text" id="i2" class="admin-input" placeholder="Satır 2" style="margin-top:10px;">
-            <div class="line-tools" id="t2">
-                <i class="fas fa-align-left" onclick="align(2,'left')"></i><i class="fas fa-align-center" onclick="align(2,'center')"></i><i class="fas fa-align-right" onclick="align(2,'right')"></i>
-                <select id="s2"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
+            <div style="background:var(--input-bg); padding:15px; border-radius:12px;">
+                <input type="text" id="i2" class="admin-input" placeholder="Satır 2">
+                <div style="display:flex; justify-content:space-around; color:#9ca3af;">
+                    <i class="fas fa-align-left" onclick="align(2,'left')"></i><i class="fas fa-align-center" onclick="align(2,'center')"></i><i class="fas fa-align-right" onclick="align(2,'right')"></i>
+                    <select id="s2"><option value="1.5rem">Normal</option><option value="2.5rem">Büyük</option></select>
+                </div>
             </div>
             <button class="action-btn" style="background:var(--success); margin-top:15px;" onclick="pubWait()">YAYINLA</button>
             <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
+        </div>
+
+        <div id="p-poll-create" class="admin-page">
+            <h3>Oylama İçin Şarkı Seç</h3>
+            <div id="poll-selection-cont"></div>
+            <button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">ANKETİ BAŞLAT</button>
+            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">VAZGEÇ</button>
         </div>
 
         <div id="p-poll-results" class="admin-page">
             <h3>Canlı Sonuçlar</h3>
             <div id="admin-live-results"></div>
             <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="askFinishPoll()">OYLAMAYI BİTİR</button>
-            <div id="poll-history-list" style="margin-top:20px;"></div>
-            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
-        </div>
-
-        <div id="p-poll-create" class="admin-page">
-            <h3>Anket Oluştur</h3>
-            <div id="poll-selection-cont"></div>
-            <button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">BAŞLAT</button>
             <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">GERİ</button>
         </div>
     </div>
@@ -126,22 +134,19 @@
         let hasVoted = false;
 
         socket.on('init_data', d => { db = d; renderAll(); updateUIState(); });
-
-        // KRİTİK DÜZELTME: Hem başlangıçta hem güncellemede oylamayı yansıt
-        socket.on('start_poll', pollData => { db.activePoll = pollData; hasVoted = false; updateUIState(); });
-        socket.on('poll_update', pollData => { db.activePoll = pollData; updateUIState(); });
-
-        socket.on('poll_finished', winnerName => {
+        socket.on('start_poll', p => { db.activePoll = p; hasVoted = false; updateUIState(); });
+        socket.on('poll_update', p => { db.activePoll = p; updateUIState(); });
+        
+        socket.on('poll_finished', winner => {
             db.activePoll = null; hasVoted = false;
-            const view = document.getElementById('poll-view');
+            const v = document.getElementById('poll-view');
             document.getElementById('waiting-area').style.display = 'none';
-            view.style.display = 'flex';
-            view.innerHTML = `<h2 style="color:var(--success)">Sıradaki Şarkı:</h2><h1 style="font-size:2.3rem; animation:blinker 0.5s step-end infinite alternate;">${winnerName}</h1>`;
-            
+            v.style.display = 'flex';
+            v.innerHTML = `<h2 style="color:var(--success)">Sıradaki Şarkı:</h2><h1 style="font-size:2.3rem;">${winner}</h1>`;
             setTimeout(() => {
-                view.style.display = 'none';
-                view.innerHTML = `<h2 id="poll-title">Sıradaki Şarkıyı Seç!</h2><div id="poll-options-list"></div>`;
-                document.getElementById('waiting-area').style.display = 'block';
+                v.style.display = 'none';
+                v.innerHTML = `<h2 id="poll-title">Sıradaki Şarkıyı Seç!</h2><div id="poll-options-list"></div>`;
+                updateUIState();
                 socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'MÜZİĞİN KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'});
             }, 10000);
         });
@@ -154,74 +159,87 @@
         });
 
         function updateUIState() {
-            const isLive = db.sceneActive;
-            const poll = db.activePoll;
-            document.getElementById('live-status').style.display = isLive ? 'block' : 'none';
-            document.getElementById('btn-start-scene').style.display = isLive ? 'none' : 'flex';
-            document.getElementById('active-scene-controls').style.display = isLive ? 'flex' : 'none';
-            document.getElementById('standard-menu').style.display = isLive ? 'none' : 'block';
+            const live = db.sceneActive;
+            document.getElementById('live-status').style.display = live ? 'block' : 'none';
+            document.getElementById('btn-start-scene').style.display = live ? 'none' : 'flex';
+            document.getElementById('active-scene-controls').style.display = live ? 'flex' : 'none';
+            document.getElementById('standard-menu').style.display = live ? 'none' : 'block';
             
-            if(poll) {
+            if(db.activePoll) {
                 document.getElementById('waiting-area').style.display = 'none';
                 document.getElementById('poll-view').style.display = 'flex';
-                const total = poll.options.reduce((a, b) => a + (b.votes || 0), 0);
-                document.getElementById('poll-options-list').innerHTML = poll.options.map(opt => {
-                    const perc = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
-                    return `<div class="poll-card" onclick="${hasVoted ? '' : `castVote('${opt.id}')`}">
-                        <div class="progress-bar" style="width:${hasVoted ? perc : 0}%"></div>
-                        <div class="poll-text"><span>${opt.name}</span>${hasVoted ? `<span>%${perc}</span>` : ''}</div>
+                const tot = db.activePoll.options.reduce((a,b) => a+(b.votes||0), 0);
+                document.getElementById('poll-options-list').innerHTML = db.activePoll.options.map(o => {
+                    const p = tot > 0 ? Math.round((o.votes/tot)*100) : 0;
+                    return `<div class="poll-card" onclick="${hasVoted?'':`castVote('${o.id}')`}">
+                        <div class="progress-bar" style="width:${hasVoted?p:0}%"></div>
+                        <div class="poll-text"><span>${o.name}</span>${hasVoted?`<span>%${p}</span>`:''}</div>
                     </div>`;
                 }).join('');
-                if(document.getElementById('p-poll-results').classList.contains('active')) renderAdminResults();
             } else {
                 document.getElementById('poll-view').style.display = 'none';
                 document.getElementById('waiting-area').style.display = 'block';
             }
         }
 
-        function castVote(sId) { hasVoted = true; socket.emit('submit_vote', sId); }
-
-        function renderAdminResults() {
-            const poll = db.activePoll; if(!poll) return;
-            const total = poll.options.reduce((a, b) => a + (b.votes || 0), 0);
-            document.getElementById('admin-live-results').innerHTML = poll.options.map(opt => {
-                const perc = total > 0 ? Math.round((opt.votes / total) * 100) : 0;
-                return `<div style="margin-bottom:10px;">${opt.name} (%${perc})<div style="background:#333; height:8px; border-radius:4px;"><div style="background:var(--success); width:${perc}%; height:100%; border-radius:4px;"></div></div></div>`;
-            }).join('');
+        // --- ADMIN AKSİYONLARI ---
+        function askStartScene() { 
+            openDrawer(`<h4>Sahne Başlasın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">EVET, BAŞLAT</button>`); 
+        }
+        function confirmStartScene() {
+            db.sceneActive = true; 
+            socket.emit('db_update', db); 
+            updateUIState(); 
+            closeDrawer();
+            socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'MÜZİĞİN KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'});
         }
 
-        function sendPoll() {
-            const sel = Array.from(document.querySelectorAll('.poll-checkbox:checked')).map(cb => ({ id: cb.value, name: cb.getAttribute('data-name'), votes: 0 }));
-            if(sel.length < 2) return openDrawer(`<h4>Hata</h4><p>En az 2 şarkı!</p><button class="action-btn" onclick="closeDrawer()">TAMAM</button>`);
-            db.activePoll = { options: sel, id: Date.now() };
-            socket.emit('db_update', db); socket.emit('start_poll', db.activePoll); openPage('p-main');
-        }
-
-        function confirmFinishPoll() {
-            const winner = [...db.activePoll.options].sort((a,b) => b.votes - a.votes)[0];
-            db.pollHistory.push(`Oylama ${db.pollHistory.length + 1} - ${winner.name}`);
-            socket.emit('finish_poll', winner.name); db.activePoll = null; socket.emit('db_update', db); closeDrawer(); openPage('p-main');
-        }
-
-        // --- Diğer Fonksiyonlar ---
         function renderAll() {
-            document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} <i class="fas fa-chevron-down"></i></button><div class="cat-songs"><button onclick="askDelCat(${c.id},'${c.name}')">Sil</button></div></div>`).join('');
-            document.getElementById('song-list-cont').innerHTML = db.songs.map(s => `<div class="list-item">${s.name} <i class="fas fa-trash" onclick="askDelSong(${s.id})"></i></div>`).join('');
+            // Kategoriler Listesi
+            document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
+                const songs = db.songs.filter(s => s.catId == c.id);
+                return `<div class="cat-box">
+                    <button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button>
+                    <div class="cat-songs">
+                        <button class="action-btn" style="background:var(--danger); font-size:0.8rem; margin-bottom:5px;" onclick="askDelCat(${c.id},'${c.name}')">Kategoriyi Sil</button>
+                        ${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger)" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}
+                    </div>
+                </div>`;
+            }).join('');
+            
+            // Şarkı Listesi
+            document.getElementById('song-list-cont').innerHTML = db.songs.map(s => `
+                <div class="list-item">
+                    <span>${s.name}</span>
+                    <div style="display:flex; gap:10px; align-items:center;">
+                        <select onchange="assignToCat(${s.id}, this.value)" style="background:#0f172a; color:white; border:1px solid #374151;">
+                            <option value="">Kategori Seç...</option>
+                            ${db.categories.map(c => `<option value="${c.id}" ${s.catId==c.id?'selected':''}>${c.name}</option>`).join('')}
+                        </select>
+                        <i class="fas fa-trash" style="color:var(--danger)" onclick="askDelSong(${s.id})"></i>
+                    </div>
+                </div>`).join('');
+            
+            // Oylama Seçimi
             document.getElementById('poll-selection-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
-                return songs.length ? `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name}</button><div class="cat-songs">${songs.map(s => `<div class="list-item">${s.name} <input type="checkbox" class="poll-checkbox" value="${s.id}" data-name="${s.name}"></div>`).join('')}</div></div>` : '';
+                return songs.length ? `<div class="cat-box"><div class="cat-btn">${c.name}</div><div class="cat-songs active">${songs.map(s => `<div class="list-item"><span>${s.name}</span><input type="checkbox" class="poll-checkbox" value="${s.id}" data-name="${s.name}"></div>`).join('')}</div></div>` : '';
             }).join('');
         }
-        function align(l, t) { tempAligns[l] = t; }
-        function pubWait() { socket.emit('bekleme_mesaji_degistir', { line1: document.getElementById('i1').value, align1: tempAligns[1], size1: document.getElementById('s1').value, line2: document.getElementById('i2').value, align2: tempAligns[2], size2: document.getElementById('s2').value }); }
-        function showAuthDrawer() { openDrawer(`<h4>Giriş</h4><input type="password" id="admin-pw" class="admin-input"><button class="action-btn" onclick="if(document.getElementById('admin-pw').value==='1167'){closeDrawer();document.getElementById('admin-portal').style.display='block';}">GİRİŞ</button>`); }
-        function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
+
+        function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input id="nc-n" class="admin-input"><button class="action-btn" onclick="db.categories.push({id:Date.now(),name:document.getElementById('nc-n').value});socket.emit('db_update',db);closeDrawer();renderAll();">EKLE</button>`); }
+        function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input id="ns-n" class="admin-input"><button class="action-btn" onclick="db.songs.push({id:Date.now(),name:document.getElementById('ns-n').value,catId:null});socket.emit('db_update',db);closeDrawer();renderAll();">EKLE</button>`); }
+        function assignToCat(sId, cId) { db.songs.find(s=>s.id==sId).catId = cId ? parseInt(cId) : null; socket.emit('db_update', db); renderAll(); }
+        function askDelCat(id, n) { openDrawer(`<h4>${n} Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.categories=db.categories.filter(c=>c.id!==${id});socket.emit('db_update',db);closeDrawer();renderAll();">SİL</button>`); }
+        function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();renderAll();">SİL</button>`); }
+        function showAuthDrawer() { openDrawer(`<h4>Giriş</h4><input type="password" id="pw" class="admin-input"><button class="action-btn" onclick="if(document.getElementById('pw').value==='1167'){closeDrawer();document.getElementById('admin-portal').style.display='block';}">GİRİŞ</button>`); }
+        function openDrawer(h) { document.getElementById('drawer-content').innerHTML=h; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
-        function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); if(id==='p-poll-results') renderAdminResults(); renderAll(); }
-        function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="db.sceneActive=true;socket.emit('db_update',db);updateUIState();closeDrawer();socket.emit('bekleme_mesaji_degistir',{line1:'SIRADAKİ OYLAMAYA KADAR',align1:'center',size1:'1.5rem',line2:'MÜZİĞİN KEYFİNİ ÇIKAR',align2:'center',size2:'1.5rem'});">BAŞLAT</button>`); }
-        function askEndScene() { openDrawer(`<h4>Sahne Bitir?</h4><input type="password" id="end-pw" class="admin-input"><button class="action-btn" onclick="if(document.getElementById('end-pw').value==='1167'){db.sceneActive=false;db.activePoll=null;socket.emit('db_update',db);closeDrawer();updateUIState();}">BİTİR</button>`); }
-        function askFinishPoll() { openDrawer(`<h4>Bitir?</h4><button onclick="confirmFinishPoll()">EVET</button>`); }
-        function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
+        function openPage(id) { document.querySelectorAll('.admin-page').forEach(p=>p.classList.remove('active')); document.getElementById(id).classList.add('active'); renderAll(); }
+        function castVote(id) { hasVoted=true; socket.emit('submit_vote', id); }
+        function closeAdminPanel() { document.getElementById('admin-portal').style.display='none'; }
+        function pubWait() { socket.emit('bekleme_mesaji_degistir', {line1:document.getElementById('i1').value, align1:tempAligns[1], size1:document.getElementById('s1').value, line2:document.getElementById('i2').value, align2:tempAligns[2], size2:document.getElementById('s2').value}); }
+        function align(l,t) { tempAligns[l]=t; }
     </script>
 </body>
 </html>
