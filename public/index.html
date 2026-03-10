@@ -21,7 +21,7 @@
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
         
-        /* Android ve Mobil Düzenlemesi */
+        /* Android / Mobil Buton Sabitleme */
         .admin-main-btn { 
             background: var(--input-bg); 
             border: 1px solid #374151; 
@@ -38,6 +38,7 @@
             margin-bottom: 12px; 
             box-sizing: border-box;
             min-height: 65px;
+            flex-shrink: 0;
         }
 
         .drawer { position: fixed; bottom: -100%; left: 0; width: 100%; background: #1e293b; z-index: 2000; padding: 25px; box-sizing: border-box; border-radius: 24px 24px 0 0; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); border-top: 3px solid var(--primary); }
@@ -45,7 +46,7 @@
         .drawer-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1999; }
         .drawer-overlay.active { display: block; }
 
-        .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; }
+        .action-btn { padding: 15px; border-radius: 10px; border: none; color: white; font-weight: bold; cursor: pointer; width: 100%; font-size: 1rem; flex-shrink: 0; }
         .admin-input { background: #0f172a; border: 1px solid #374151; color: white; padding: 14px; border-radius: 8px; width: 100%; box-sizing: border-box; outline: none; margin-bottom: 10px; }
         
         .cat-box { background: var(--input-bg); border: 1px solid #374151; border-radius: 10px; margin-bottom: 12px; }
@@ -53,6 +54,7 @@
         .cat-songs { display: none; padding: 10px; background: rgba(0,0,0,0.2); border-top: 1px solid #374151; }
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.8rem; }
     </style>
 </head>
 <body>
@@ -62,6 +64,8 @@
         <div id="v2" class="waiting-line"></div>
     </div>
 
+    <button id="admin-trigger" onclick="showAuthDrawer()"><i class="fas fa-cog"></i></button>
+
     <div id="drawer-bg" class="drawer-overlay" onclick="closeDrawer()"></div>
     <div id="main-drawer" class="drawer"><div id="drawer-content"></div></div>
 
@@ -69,7 +73,7 @@
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center; margin-bottom: 25px;">Istek Portal - Yönetim</h3>
             
-            <button id="btn-start-scene" class="admin-main-btn" onclick="openDrawer('<h4>Başlatılsın mı?</h4><button class=\'action-btn\' style=\'background:var(--success)\' onclick=\'socket.emit(\'sahne_durumu_degistir\', true);closeDrawer();\'>EVET</button>')" style="border-left: 5px solid var(--success);">
+            <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">
                 Sahne Başlat <i class="fas fa-play"></i>
             </button>
 
@@ -113,6 +117,18 @@
 
         socket.on('init_data', d => { db = d; renderAll(); });
 
+        function showAuthDrawer() { 
+            openDrawer(`<h4>Yönetici Girişi</h4><input type="password" id="admin-pw" class="admin-input" placeholder="Şifre"><button class="action-btn" style="background:var(--primary)" onclick="checkAuth()">GİRİŞ</button>`); 
+            setTimeout(() => document.getElementById('admin-pw').focus(), 200);
+        }
+
+        function checkAuth() {
+            if(document.getElementById('admin-pw').value === "1167") {
+                closeDrawer();
+                document.getElementById('admin-portal').style.display = 'block';
+            } else { alert("Hatalı Şifre!"); }
+        }
+
         function renderAll() {
             // Kategoriler
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
@@ -135,9 +151,8 @@
             `).join('');
         }
 
-        // SADECE BOŞTA OLAN ŞARKILARI LİSTELEME
         function showAddSongToCatDrawer(catId) {
-            const freeSongs = db.songs.filter(s => !s.catId); // catId null veya boş olanlar
+            const freeSongs = db.songs.filter(s => !s.catId);
             let html = `<h4>Boştaki Şarkılar</h4><div style="max-height:300px; overflow-y:auto;">`;
             if(freeSongs.length === 0) {
                 html += `<p style="text-align:center; color:#9ca3af;">Atanacak boşta şarkı yok.</p>`;
@@ -157,7 +172,10 @@
             }
         }
 
-        // Yardımcı Fonksiyonlar
+        function askStartScene() {
+            openDrawer(`<h4>Sahne Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET, BAŞLAT</button>`);
+        }
+
         function openDrawer(html) { document.getElementById('drawer-content').innerHTML = html; document.getElementById('main-drawer').classList.add('active'); document.getElementById('drawer-bg').classList.add('active'); }
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
