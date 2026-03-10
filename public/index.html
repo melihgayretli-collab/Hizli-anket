@@ -17,6 +17,10 @@
         .content { position: relative; z-index: 10; text-align: center; height: 100vh; display: flex; flex-direction: column; justify-content: center; }
         .waiting-line { transition: opacity 0.5s ease, transform 0.5s ease; font-weight: bold; text-shadow: 2px 2px 10px rgba(0,0,0,0.8); }
 
+        /* LIVE Yazısı */
+        #live-status { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); color: var(--danger); font-weight: bold; font-size: 1.4rem; z-index: 1001; animation: blinker 1s linear infinite; text-transform: uppercase; letter-spacing: 2px; }
+        @keyframes blinker { 50% { opacity: 0; } }
+
         #admin-portal { display: none; position: fixed; inset: 0; background: var(--panel-bg); z-index: 1000; padding: 20px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
         .admin-page { display: none; flex-direction: column; max-width: 500px; margin: 0 auto; padding-bottom: 80px; }
         .admin-page.active { display: flex; }
@@ -40,13 +44,17 @@
         .cat-songs.active { display: block; }
         .list-item { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 8px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
         .line-tools { display: flex; gap: 15px; align-items: center; color: #9ca3af; margin-top: 5px; }
-        .line-tools i { cursor: pointer; font-size: 1.2rem; }
         #admin-trigger { position: fixed; top: 15px; right: 15px; z-index: 100; opacity: 0.1; background: none; border: none; color: white; cursor: pointer; font-size: 1.8rem; }
     </style>
 </head>
 <body>
     <div class="overlay"></div>
-    <div class="content"><div id="v1" class="waiting-line"></div><div id="v2" class="waiting-line"></div></div>
+    <div id="live-status">● LIVE</div>
+
+    <div class="content">
+        <div id="v1" class="waiting-line"></div>
+        <div id="v2" class="waiting-line"></div>
+    </div>
 
     <button id="admin-trigger" onclick="showAuthDrawer()"><i class="fas fa-cog"></i></button>
 
@@ -56,11 +64,32 @@
     <div id="admin-portal">
         <div id="p-main" class="admin-page active">
             <h3 style="text-align:center; margin-bottom: 25px;">Istek Portal - Yönetim</h3>
-            <button class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">Sahne Başlat <i class="fas fa-play"></i></button>
-            <div id="standard-menu">
-                <button class="admin-main-btn" onclick="openPage('p-repertuar')">Repertuar Düzenle <i class="fas fa-music"></i></button>
-                <button class="admin-main-btn" onclick="openPage('p-waiting')">Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i></button>
+            
+            <button id="btn-start-scene" class="admin-main-btn" onclick="askStartScene()" style="border-left: 5px solid var(--success);">
+                Sahne Başlat <i class="fas fa-play"></i>
+            </button>
+
+            <div id="active-scene-controls" style="display:none; flex-direction:column; width:100%;">
+                <button class="admin-main-btn" onclick="askEndScene()" style="border-left: 5px solid var(--danger);">
+                    Sahne Bitir <i class="fas fa-stop"></i>
+                </button>
+                <button class="admin-main-btn" onclick="alert('Oylama modülü hazır değil')">
+                    Oylama Oluştur <i class="fas fa-poll-h"></i>
+                </button>
+                <button class="admin-main-btn" onclick="alert('Sonuç ekranı hazır değil')">
+                    Sonuç İzle <i class="fas fa-chart-line"></i>
+                </button>
             </div>
+
+            <div id="standard-menu" style="width:100%;">
+                <button class="admin-main-btn" onclick="openPage('p-repertuar')">
+                    Repertuar Düzenle <i class="fas fa-music"></i>
+                </button>
+                <button class="admin-main-btn" onclick="openPage('p-waiting')">
+                    Bekleme Ekranı Düzenle <i class="fas fa-desktop"></i>
+                </button>
+            </div>
+
             <button class="action-btn" style="background:var(--danger); margin-top:20px;" onclick="closeAdminPanel()">PANELİ KAPAT</button>
         </div>
 
@@ -106,14 +135,56 @@
         const socket = io();
         let db = { categories: [], songs: [] };
         let tempAligns = { 1: 'center', 2: 'center' };
+        let isSceneActive = false;
+        let lastManualText = { line1: '', align1: 'center', size1: '1.5rem', line2: '', align2: 'center', size2: '1.5rem' };
 
         socket.on('init_data', d => { db = d; renderAll(); });
         socket.on('bekleme_mesaji_guncelle', d => {
             const v1 = document.getElementById('v1'), v2 = document.getElementById('v2');
             v1.innerText = d.line1; v1.style.textAlign = d.align1; v1.style.fontSize = d.size1;
             v2.innerText = d.line2; v2.style.textAlign = d.align2; v2.style.fontSize = d.size2;
+            if(!isSceneActive) lastManualText = d; // Sahne yokken metni yedekle
         });
 
+        // Sahne Başlatma Onayı
+        function askStartScene() {
+            openDrawer(`<h4>Sahne Başlatılsın mı?</h4><p style="font-size:0.9rem; color:#9ca3af;">Repertuar ve Bekleme Ekranı düzenleme kilitlenecektir.</p><button class="action-btn" style="background:var(--success)" onclick="startScene()">EVET, BAŞLAT</button>`);
+        }
+
+        function startScene() {
+            isSceneActive = true;
+            updateUIState();
+            // Otomatik Metin Yayını
+            socket.emit('bekleme_mesaji_degistir', {
+                line1: "BİR SONRAKİ OYLAMAYA KADAR", align1: "center", size1: "1.5rem",
+                line2: "MÜZİĞİN KEYFİNİ ÇIKAR", align2: "center", size2: "1.5rem"
+            });
+            closeDrawer();
+        }
+
+        // Sahne Bitirme Onayı (Şifreli)
+        function askEndScene() {
+            openDrawer(`<h4>Sahne Bitirilsin mi?</h4><input type="password" id="end-pw" class="admin-input" placeholder="Şifre (1167)"><button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">SAHNEYİ BİTİR</button>`);
+        }
+
+        function confirmEndScene() {
+            if(document.getElementById('end-pw').value === "1167") {
+                isSceneActive = false;
+                updateUIState();
+                // Eski metne geri dön
+                socket.emit('bekleme_mesaji_degistir', lastManualText);
+                closeDrawer();
+            } else { alert("Hatalı Şifre!"); }
+        }
+
+        function updateUIState() {
+            document.getElementById('live-status').style.display = isSceneActive ? 'block' : 'none';
+            document.getElementById('btn-start-scene').style.display = isSceneActive ? 'none' : 'flex';
+            document.getElementById('standard-menu').style.display = isSceneActive ? 'none' : 'block';
+            document.getElementById('active-scene-controls').style.display = isSceneActive ? 'flex' : 'none';
+        }
+
+        // --- Mevcut Fonksiyonlar (Dokunulmadı) ---
         function align(l, t) {
             tempAligns[l] = t;
             const tools = document.getElementById(`t${l}`);
@@ -131,11 +202,12 @@
         }
 
         function renderAll() {
+            // Kategoriler
             document.getElementById('cat-list-cont').innerHTML = db.categories.map(c => {
                 const songs = db.songs.filter(s => s.catId == c.id);
                 return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} (${songs.length}) <i class="fas fa-chevron-down"></i></button><div class="cat-songs"><div style="display:flex; gap:10px; margin-bottom:10px;"><button class="action-btn" style="background:var(--primary); font-size:0.8rem;" onclick="showAddSongToCatDrawer(${c.id})">Ekle</button><button class="action-btn" style="background:var(--danger); font-size:0.8rem;" onclick="askDelCat(${c.id},'${c.name}')">Sil</button></div>${songs.map(s => `<div class="list-item"><span>${s.name}</span><i class="fas fa-minus-circle" style="color:var(--danger); cursor:pointer;" onclick="assignToCat(${s.id}, null)"></i></div>`).join('')}</div></div>`;
             }).join('');
-
+            // Şarkılar
             document.getElementById('song-list-cont').innerHTML = db.songs.map(s => {
                 let opts = db.categories.map(c => `<option value="${c.id}" ${s.catId == c.id ? 'selected' : ''}>${c.name}</option>`).join('');
                 return `<div class="list-item"><span style="flex:1">${s.name}</span><select style="background:#0f172a; color:white; border:1px solid #374151; padding:5px; border-radius:4px;" onchange="assignToCat(${s.id}, this.value)"><option value="">-</option>${opts}</select><i class="fas fa-trash" style="color:var(--danger); margin-left:12px; cursor:pointer;" onclick="askDelSong(${s.id})"></i></div>`;
@@ -156,10 +228,8 @@
         function closeDrawer() { document.getElementById('main-drawer').classList.remove('active'); document.getElementById('drawer-bg').classList.remove('active'); }
         function openPage(id) { document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active')); document.getElementById(id).classList.add('active'); }
         function closeAdminPanel() { document.getElementById('admin-portal').style.display = 'none'; }
-        function askStartScene() { openDrawer(`<h4>Başlatılsın mı?</h4><button class="action-btn" style="background:var(--success)" onclick="socket.emit('sahne_durumu_degistir', true);closeDrawer();">EVET</button>`); }
         function showNewCatDrawer() { openDrawer(`<h4>Yeni Kategori</h4><input type="text" id="nc-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveCat()">KAYDET</button>`); }
         function saveCat() { const n = document.getElementById('nc-name').value; if(n) { db.categories.push({id: Date.now(), name: n}); socket.emit('db_update', db); closeDrawer(); } }
-        function askDelCat(id, name) { openDrawer(`<h4>"${name}" Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.categories=db.categories.filter(c=>c.id!==${id});db.songs.forEach(s=>{if(s.catId==${id})s.catId=null;});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
         function showNewSongDrawer() { openDrawer(`<h4>Yeni Şarkı</h4><input type="text" id="ns-name" class="admin-input"><button class="action-btn" style="background:var(--success)" onclick="saveSong()">KAYDET</button>`); }
         function saveSong() { const n = document.getElementById('ns-name').value; if(n) { db.songs.push({id: Date.now(), name: n, catId: null}); socket.emit('db_update', db); closeDrawer(); } }
         function askDelSong(id) { openDrawer(`<h4>Silinsin mi?</h4><button class="action-btn" style="background:var(--danger)" onclick="db.songs=db.songs.filter(s=>s.id!==${id});socket.emit('db_update',db);closeDrawer();">SİL</button>`); }
