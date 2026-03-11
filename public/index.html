@@ -256,7 +256,7 @@
                 document.getElementById('poll-options-list').innerHTML = poll.options.map(opt => `<div class="poll-card" onclick="castVote('${opt.id}')">${opt.name}</div>`).join('');
             }
         }
-        function castVote(sId) { socket.emit('submit_vote', sId); document.getElementById('poll-view').innerHTML = `<h2>Oyun Alındı!</h2><p>Teşekkürler Sahip.</p>`; }
+        function castVote(sId) { socket.emit('submit_vote', sId); document.getElementById('poll-view').innerHTML = `<h2>Oyun Alındı!</h2><p>Teşekkürler</p>`; }
 
         // Sahne İşlemleri
         function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">BAŞLAT</button>`); }
