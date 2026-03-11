@@ -35,7 +35,6 @@ io.on('connection', (socket) => {
     if(db.activePoll) socket.emit('poll_update', db.activePoll);
 
     socket.on('db_update', (newDB) => {
-        // Sahne bitirilmişse (sceneActive: false yapılmışsa) geçmişi temizle
         if (newDB.sceneActive === false) {
             newDB.history = [];
             newDB.usedSongs = [];
@@ -71,4 +70,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server: ${PORT}`));
+server.listen(PORT, () => console.log(`İstek Portal Aktif: ${PORT}`));
