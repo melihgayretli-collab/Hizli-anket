@@ -11,15 +11,21 @@ const io = new Server(server);
 // RENDER PERSISTENT DISK YOLU
 const DATA_PATH = path.join('/var/istek', 'db.json');
 
-// Dosya kontrolü ve başlangıç verisi
+// Dosya kontrolü ve başlangıç verisi (Genişletilmiş yapı)
 fs.ensureFileSync(DATA_PATH);
 try {
     const content = fs.readFileSync(DATA_PATH, 'utf8').trim();
     if (content === '') {
-        fs.writeJsonSync(DATA_PATH, { categories: [], songs: [], sceneActive: false, activePoll: null }, { spaces: 2 });
+        fs.writeJsonSync(DATA_PATH, { categories: [], songs: [], sceneActive: false, activePoll: null, usedSongs: [], pollHistory: [] }, { spaces: 2 });
+    } else {
+        // Mevcut DB'ye yeni alanları ekle (Migration)
+        const db = fs.readJsonSync(DATA_PATH);
+        if (!db.usedSongs) db.usedSongs = [];
+        if (!db.pollHistory) db.pollHistory = [];
+        fs.writeJsonSync(DATA_PATH, db, { spaces: 2 });
     }
 } catch (e) {
-    fs.writeJsonSync(DATA_PATH, { categories: [], songs: [], sceneActive: false, activePoll: null }, { spaces: 2 });
+    fs.writeJsonSync(DATA_PATH, { categories: [], songs: [], sceneActive: false, activePoll: null, usedSongs: [], pollHistory: [] }, { spaces: 2 });
 }
 
 const readDB = () => fs.readJsonSync(DATA_PATH);
@@ -47,7 +53,6 @@ io.on('connection', (socket) => {
     socket.on('db_update', (newDB) => {
         writeDB(newDB);
         io.emit('init_data', newDB);
-        // Eğer admin anketi bitirdiyse veya başlattıysa herkese yay
         io.emit('poll_update', newDB.activePoll);
     });
 
@@ -59,7 +64,6 @@ io.on('connection', (socket) => {
             if (option) {
                 option.votes = (Number(option.votes) || 0) + 1;
                 writeDB(db);
-                // Sadece oyları tüm kullanıcılara ve admin paneline yayınla
                 io.emit('poll_update', db.activePoll);
             }
         }
@@ -71,7 +75,7 @@ io.on('connection', (socket) => {
         io.emit('bekleme_mesaji_guncelle', data);
     });
 
-    // Anket Başlatma Sinyali (Hızlı yanıt için)
+    // Anket Başlatma Sinyali
     socket.on('start_poll', (pollData) => {
         const db = readDB();
         db.activePoll = pollData;
