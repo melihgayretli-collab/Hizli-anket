@@ -260,7 +260,7 @@
 
         // Sahne İşlemleri
         function askStartScene() { openDrawer(`<h4>Sahne Başlat?</h4><button class="action-btn" style="background:var(--success)" onclick="confirmStartScene()">BAŞLAT</button>`); }
-        function confirmStartScene() { db.sceneActive = true; socket.emit('db_update', db); closeDrawer(); socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'}); }
+        function confirmStartScene() { db.sceneActive = true; socket.emit('db_update', db); closeDrawer(); socket.emit('bekleme_mesaji_degistir', {line1:'SIRADAKİ OYLAMAYA KADAR', align1:'center', size1:'1.5rem', line2:'MÜZİĞİN KEYFİNİ ÇIKAR', align2:'center', size2:'1.5rem'}); }
         function askEndScene() { openDrawer(`<h4>Sahne Bitir?</h4><input type="password" id="end-pw" class="admin-input"><button class="action-btn" style="background:var(--danger)" onclick="confirmEndScene()">BİTİR</button>`); }
         function confirmEndScene() { if(document.getElementById('end-pw').value === '1167') { db.sceneActive = false; db.activePoll = null; socket.emit('db_update', db); socket.emit('bekleme_mesaji_degistir', db.lastManual || {line1:"", line2:""}); closeDrawer(); setTimeout(() => location.reload(), 500); } }
 
