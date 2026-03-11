@@ -241,7 +241,7 @@
         // Kullanıcı ekranında canlı sonuçları göster
         function showLiveResultsToUser() {
             if(!db.activePoll) return;
-            document.getElementById('poll-title-user').innerText = "Canlı Sonuçlar";
+            document.getElementById('poll-title-user').innerText = " ";
             const total = db.activePoll.options.reduce((a, b) => a + (Number(b.votes) || 0), 0);
             document.getElementById('poll-options-list').innerHTML = db.activePoll.options.map(opt => {
                 const v = Number(opt.votes) || 0;
