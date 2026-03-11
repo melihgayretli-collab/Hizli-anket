@@ -146,14 +146,101 @@
         </div>
 
         <div id="p-poll-create" class="admin-page">
-            <h3>Oylama Seçenekleri</h3>
-            <div id="poll-selection-cont"></div>
-            <button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">ANKETİ BAŞLAT</button>
-            <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">VAZGEÇ</button>
-        </div>
+    <h3>Oylama Seçenekleri</h3>
+    <div style="margin-bottom:15px; position:relative;">
+        <i class="fas fa-search" style="position:absolute; left:12px; top:14px; color:#9ca3af;"></i>
+        <input type="text" id="song-search" class="admin-input" placeholder="Şarkı ara..." style="padding-left:35px;" oninput="filterSongs(this.value)">
     </div>
+    <div id="poll-selection-cont"></div>
+    <button class="action-btn" style="background:var(--success); margin-top:20px;" onclick="sendPoll()">ANKETİ BAŞLAT</button>
+    <button class="action-btn" style="background:var(--input-bg); margin-top:10px;" onclick="openPage('p-main')">VAZGEÇ</button>
+</div>
 
-    <script>
+<div id="p-results" class="admin-page">
+    <h3>Canlı Oylama Sonuçları</h3>
+    <div id="results-cont" style="margin-top:20px;"></div>
+    <button id="finish-poll-btn" class="action-btn" style="background:var(--danger); margin-top:30px;" onclick="finishPoll()">OYLAMAYI BİTİR VE KAZANANI KAYDET</button>
+    
+    <div id="poll-history" style="margin-top:40px; border-top: 1px solid #374151; padding-top:20px;">
+        <h4 style="color:#9ca3af;"><i class="fas fa-history"></i> Oylama Geçmişi (Kazananlar)</h4>
+        <div id="history-list"></div>
+    </div>
+    <button class="action-btn" style="background:var(--input-bg); margin-top:20px;" onclick="openPage('p-main')">GERİ</button>
+</div>
+
+<script>
+        // Dinamik Arama Fonksiyonu
+    function filterSongs(query) {
+        const term = query.toLowerCase();
+        document.querySelectorAll('#poll-selection-cont .list-item').forEach(item => {
+            const songName = item.querySelector('span').innerText.toLowerCase();
+            item.style.display = songName.includes(term) ? 'flex' : 'none';
+        });
+        // Boş kalan kategorileri gizle
+        document.querySelectorAll('#poll-selection-cont .cat-box').forEach(box => {
+            const visibleSongs = box.querySelectorAll('.list-item[style="display: flex;"]').length;
+            box.style.display = (visibleSongs > 0 || term === "") ? 'block' : 'none';
+        });
+    }
+
+    // Oylama Geçmişini ve Kilitli Şarkıları Render Etme
+    function renderAll() {
+        // Oylama Seçimi - Engelli şarkıları kontrol et
+        const usedSongs = db.usedSongs || [];
+        document.getElementById('poll-selection-cont').innerHTML = db.categories.map(c => {
+            const songs = db.songs.filter(s => s.catId == c.id);
+            if(songs.length === 0) return '';
+            return `<div class="cat-box"><button class="cat-btn" onclick="this.nextElementSibling.classList.toggle('active')">${c.name} <i class="fas fa-chevron-down"></i></button><div class="cat-songs active">${songs.map(s => {
+                const isUsed = usedSongs.includes(String(s.id));
+                return `<div class="list-item" style="opacity: ${isUsed ? '0.4' : '1'}">
+                    <span>${s.name} ${isUsed ? '(Çalındı)' : ''}</span>
+                    <input type="checkbox" class="poll-checkbox" value="${s.id}" data-name="${s.name}" ${isUsed ? 'disabled' : ''}>
+                </div>`;
+            }).join('')}</div></div>`;
+        }).join('');
+
+        // Geçmiş Listesini Render Et
+        const historyCont = document.getElementById('history-list');
+        if(db.history && db.history.length > 0) {
+            historyCont.innerHTML = db.history.map(h => `
+                <div class="list-item" style="background:rgba(16, 185, 129, 0.1); border-left: 3px solid var(--success);">
+                    <span>${h.songName}</span>
+                    <span style="font-size:0.8rem; color:#9ca3af;">${h.votes} Oy</span>
+                </div>
+            `).join('');
+        } else {
+            historyCont.innerHTML = `<p style="color:#64748b; font-size:0.9rem;">Henüz tamamlanmış oylama yok.</p>`;
+        }
+    }
+
+    // Oylamayı Bitirirken Kazananı Belirle
+    function finishPoll() {
+        if(!db.activePoll) return;
+        
+        // Kazananı bul
+        const winner = [...db.activePoll.options].sort((a,b) => b.votes - a.votes)[0];
+        
+        if(winner && winner.votes > 0) {
+            if(!db.history) db.history = [];
+            if(!db.usedSongs) db.usedSongs = [];
+            
+            db.history.unshift({ songName: winner.name, votes: winner.votes, time: new Date().toLocaleTimeString() });
+            db.usedSongs.push(String(winner.id));
+        }
+
+        db.activePoll = null;
+        socket.emit('db_update', db);
+        renderResults(); // Ekranı temizle ama sayfada kal
+    }
+
+    // UI Güncelleme - Sonuç izle butonunu oylama yokken de aktif tut
+    function updateUIState() {
+        const isLive = db.sceneActive;
+        const hasPoll = db.activePoll !== null;
+        document.getElementById('btn-results').disabled = false; // Oylama olmasa da geçmişi görmek için açık bıraktık
+        document.getElementById('finish-poll-btn').style.display = hasPoll ? 'block' : 'none';
+        // ... (diğer mevcut kodlar aynı kalacak)
+    }
         const socket = io();
         let db = { categories: [], songs: [], sceneActive: false, lastManual: {line1:"", align1:"center", size1:"1.5rem", line2:"", align2:"center", size2:"1.5rem"}, activePoll: null };
         let tempAligns = { 1: 'center', 2: 'center' };
