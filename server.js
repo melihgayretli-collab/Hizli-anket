@@ -8,6 +8,33 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Başlangıç verisi güncellemesi
+fs.ensureFileSync(DATA_PATH);
+try {
+    const content = fs.readFileSync(DATA_PATH, 'utf8').trim();
+    if (content === '') {
+        fs.writeJsonSync(DATA_PATH, { 
+            categories: [], 
+            songs: [], 
+            sceneActive: false, 
+            activePoll: null,
+            history: [],    // Geçmiş oylamalar
+            usedSongs: []   // Sahne boyunca çalınan şarkı ID'leri
+        }, { spaces: 2 });
+    }
+} catch (e) { /* hata yönetimi */ }
+
+// Sahne Bitirildiğinde Geçmişi Temizle
+socket.on('db_update', (newDB) => {
+    // Eğer sahne aktifliği False'a çekildiyse geçmişi sıfırla
+    if (newDB.sceneActive === false) {
+        newDB.history = [];
+        newDB.usedSongs = [];
+    }
+    writeDB(newDB);
+    io.emit('init_data', newDB);
+});
+
 // RENDER PERSISTENT DISK YOLU
 const DATA_PATH = path.join('/var/istek', 'db.json');
 
